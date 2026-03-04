@@ -243,7 +243,7 @@ function TxRow({tx,i,t,onTap}){
       d({style:{fontWeight:900,fontSize:14,color:isIn?t.good:t.bad}},(isIn?"+":"-")+f$(tx.amount)),
       d({style:{fontSize:10,color:t.muted}},"Bal "+f$(tx.postBalance))
     ),
-    s({style:{fontSize:13,color:t.muted,marginLeft:4}},"✏️")
+    
   );
 }
 
@@ -528,7 +528,7 @@ function App(){
                     d({style:{textAlign:"right",fontWeight:900,fontSize:13,color:isIn?T.good:T.bad,fontFamily:"monospace"}},(isIn?"+":"-")+f$(tx.amount)),
                     d({style:{textAlign:"right",fontSize:12,color:T.muted,fontFamily:"monospace"}},f$(tx.postBalance)),
                     d({style:{fontSize:10,color:T.muted}},fShort(tx.when)),
-                    d({style:{fontSize:11,opacity:0.3,textAlign:"center"}},"✏️")
+                    
                   );
                 } else {
                   // CARD ROW for mobile — same as TxRow style
@@ -547,7 +547,7 @@ function App(){
                       d({style:{fontWeight:900,fontSize:14,color:isIn?T.good:T.bad}},(isIn?"+":"-")+f$(tx.amount)),
                       d({style:{fontSize:10,color:T.muted}},"Bal "+f$(tx.postBalance))
                     ),
-                    s({style:{fontSize:13,color:T.muted,marginLeft:4}},"✏️")
+                    
                   );
                 }
               })
