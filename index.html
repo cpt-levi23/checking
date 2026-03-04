@@ -11,6 +11,53 @@
 <link rel="apple-touch-icon" href="/icon.svg"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<!-- Firebase -->
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,signInWithPopup,signInWithRedirect,getRedirectResult,GoogleAuthProvider,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,doc,setDoc,onSnapshot,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCf8YVpGcKsv5jVS_Sil-huIALbGPbuP7c",
+  authDomain: "checkingapp-9f160.firebaseapp.com",
+  projectId: "checkingapp-9f160",
+  storageBucket: "checkingapp-9f160.firebasestorage.app",
+  messagingSenderId: "960468279049",
+  appId: "1:960468279049:web:05ec7ab471e2d1805fbdd8"
+};
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+const provider=new GoogleAuthProvider();
+
+window._fbAuth=auth;
+window._fbDb=db;
+window._fbProvider=provider;
+window._fbSignIn=()=>{
+  // Try popup first, fall back to redirect on mobile
+  signInWithPopup(auth,provider).catch(()=>signInWithRedirect(auth,provider));
+};
+window._fbSignOut=()=>signOut(auth);
+window._fbOnAuth=cb=>onAuthStateChanged(auth,cb);
+window._fbSave=async(uid,data)=>{
+  await setDoc(doc(db,"users",uid),{state:JSON.stringify(data),updatedAt:Date.now()});
+};
+window._fbLoad=async uid=>{
+  const snap=await getDoc(doc(db,"users",uid));
+  if(snap.exists()){const d=snap.data();return d.state?JSON.parse(d.state):null;}
+  return null;
+};
+window._fbListen=(uid,cb)=>onSnapshot(doc(db,"users",uid),snap=>{
+  if(snap.exists()&&snap.data().state)cb(JSON.parse(snap.data().state));
+});
+
+// Handle redirect result on page load
+getRedirectResult(auth).catch(()=>{});
+
+window._fbReady=true;
+window.dispatchEvent(new Event("fbready"));
+</script>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{margin:0;padding:0;background:#0f0f23;overscroll-behavior:none;}
@@ -23,7 +70,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 <div id="root"></div>
 <script>
 (function(){
-const {useState,useCallback,useEffect,createElement:e,Fragment}=React;
+const {useState,useCallback,useEffect,useRef,createElement:e,Fragment}=React;
 const d=(p,...c)=>e("div",p,...c);
 const s=(p,...c)=>e("span",p,...c);
 const b=(p,...c)=>e("button",p,...c);
@@ -117,7 +164,7 @@ function BalCard({label,value,icon,color,t,spark}){
 function TxRow({tx,i,t,onTap}){
   const isIn=tx.type==="DEPOSIT"||tx.type==="XFER-IN";
   const c=cc(tx.category);
-  return d({onClick:onTap,style:{display:"flex",alignItems:"center",gap:10,padding:"11px 16px",background:i%2===0?t.panel:t.panel2+"cc",borderBottom:`1px solid ${t.border}20`,cursor:"pointer",transition:"filter 0.1s"},onTouchStart:ev=>ev.currentTarget.style.filter="brightness(1.3)",onTouchEnd:ev=>ev.currentTarget.style.filter=""},
+  return d({onClick:onTap,style:{display:"flex",alignItems:"center",gap:10,padding:"11px 16px",background:i%2===0?t.panel:t.panel2+"cc",borderBottom:`1px solid ${t.border}20`,cursor:"pointer"},onTouchStart:ev=>ev.currentTarget.style.filter="brightness(1.3)",onTouchEnd:ev=>ev.currentTarget.style.filter=""},
     d({style:{width:34,height:34,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,background:c+"22",border:`1px solid ${c}50`}},isIn?"⬆":"⬇"),
     d({style:{flex:1,minWidth:0}},
       d({style:{fontWeight:700,fontSize:13,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},tx.note||tx.category),
@@ -131,40 +178,26 @@ function TxRow({tx,i,t,onTap}){
   );
 }
 
-// ── Edit Modal ────────────────────────────────────────────────
 function EditModal({tx,t,onSave,onDelete,onClose}){
   const [form,setForm]=useState({type:tx.type,amount:String(tx.amount),category:tx.category,note:tx.note||""});
   const [err,setErr]=useState("");
   const is={background:t.panel2,color:t.text,border:`1px solid ${t.border}60`,borderRadius:12,padding:"11px 14px",fontSize:14,outline:"none",width:"100%",fontFamily:"inherit",boxSizing:"border-box"};
-
   const save=()=>{
     const amt=parseFloat(form.amount);
     if(!amt||amt<=0){setErr("Enter a valid positive amount.");return;}
     onSave({...tx,type:form.type,amount:amt,category:form.category,note:form.note});
   };
-
-  const del=()=>{
-    if(window.confirm("Delete this transaction?"))onDelete(tx.id);
-  };
-
-  return d({style:{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"},onClick:ev=>{if(ev.target===ev.currentTarget)onClose();}},
-    // backdrop
+  const del=()=>{if(window.confirm("Delete this transaction?"))onDelete(tx.id);};
+  return d({style:{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}},
     d({style:{position:"absolute",inset:0,background:"rgba(0,0,0,0.7)"},onClick:onClose}),
-    // sheet
     d({style:{position:"relative",width:"100%",maxWidth:600,background:t.panel,borderRadius:"20px 20px 0 0",padding:"0 0 40px",boxShadow:"0 -8px 40px #00000080",maxHeight:"90vh",overflowY:"auto"}},
-      // handle
-      d({style:{display:"flex",justifyContent:"center",padding:"12px 0 4px"}},
-        d({style:{width:40,height:4,borderRadius:99,background:t.border+"80"}})
-      ),
-      // header
+      d({style:{display:"flex",justifyContent:"center",padding:"12px 0 4px"}},d({style:{width:40,height:4,borderRadius:99,background:t.border+"80"}})),
       d({style:{background:`linear-gradient(135deg,${t.h1},${t.h2})`,padding:"12px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},
         s({style:{color:"#fff",fontWeight:900,fontSize:13,letterSpacing:"0.1em"}},"EDIT TRANSACTION"),
         b({onClick:onClose,style:{background:"rgba(0,0,0,0.3)",border:"none",color:"#fff",borderRadius:8,padding:"4px 10px",fontSize:16,cursor:"pointer"}},"✕")
       ),
       d({style:{padding:"16px 18px",display:"flex",flexDirection:"column",gap:14}},
         err&&d({style:{background:t.bad+"22",color:t.bad,border:`1px solid ${t.bad}60`,borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700}},"⚠ "+err),
-
-        // Type
         d(null,
           d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"TYPE"),
           d({style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
@@ -174,14 +207,10 @@ function EditModal({tx,t,onSave,onDelete,onClose}){
             })
           )
         ),
-
-        // Amount
         d(null,
           d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"AMOUNT"),
           inp({type:"number",placeholder:"0.00",value:form.amount,min:"0",step:"0.01",onChange:ev=>setForm(p=>({...p,amount:ev.target.value})),style:{...is,fontSize:20,fontWeight:900,color:t.good}})
         ),
-
-        // Category
         d(null,
           d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"CATEGORY"),
           d({style:{display:"flex",flexWrap:"wrap",gap:6}},
@@ -191,14 +220,10 @@ function EditModal({tx,t,onSave,onDelete,onClose}){
             })
           )
         ),
-
-        // Note
         d(null,
           d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},e(Fragment,null,"NOTE ",s({style:{color:t.muted,fontWeight:400}},"(optional)"))),
           inp({type:"text",placeholder:"e.g. Grocery run…",value:form.note,onChange:ev=>setForm(p=>({...p,note:ev.target.value})),style:is})
         ),
-
-        // Buttons
         d({style:{display:"flex",gap:10,marginTop:4}},
           b({onClick:del,style:{flex:"0 0 auto",padding:"13px 18px",borderRadius:13,fontWeight:700,fontSize:14,color:t.bad,cursor:"pointer",border:`1.5px solid ${t.bad}50`,background:t.bad+"15"}},"🗑 Delete"),
           b({onClick:save,style:{flex:1,padding:"14px 0",borderRadius:13,fontWeight:900,fontSize:15,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`,boxShadow:`0 4px 18px ${t.accent}50`}},"✅ Save Changes")
@@ -208,8 +233,21 @@ function EditModal({tx,t,onSave,onDelete,onClose}){
   );
 }
 
-function Setup({onDone}){
-  const t=THEMES[0];
+function SignInScreen({t}){
+  return d({style:{minHeight:"100vh",background:t.panel2,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"system-ui,sans-serif"}},
+    d({style:{textAlign:"center",maxWidth:360}},
+      d({style:{fontSize:60,marginBottom:16}},"🏦"),
+      d({style:{color:"#fff",fontWeight:900,fontSize:22,marginBottom:8}},"CHECKING ACCOUNT"),
+      d({style:{color:t.muted,fontSize:13,marginBottom:32,lineHeight:1.6}},"Sign in with Google to sync your data across all your devices automatically."),
+      b({onClick:()=>window._fbSignIn&&window._fbSignIn(),style:{display:"flex",alignItems:"center",justifyContent:"center",gap:12,width:"100%",padding:"15px 20px",borderRadius:14,fontWeight:700,fontSize:15,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`,boxShadow:`0 4px 20px ${t.accent}50`}},
+        s({style:{fontSize:20}},"🔑"),"Sign in with Google"
+      ),
+      d({style:{color:t.muted,fontSize:11,marginTop:16}})
+    )
+  );
+}
+
+function Setup({onDone,t}){
   const [name,setName]=useState("");
   const [digits,setDigits]=useState("");
   const [chk,setChk]=useState("");
@@ -238,13 +276,15 @@ function Setup({onDone}){
         field(e(Fragment,null,"SAVINGS BALANCE ",s({style:{color:t.muted,fontWeight:400}},"(optional)")),inp({type:"number",placeholder:"0.00",min:"0",step:"0.01",value:sav,onChange:ev=>setSav(ev.target.value),style:is})),
         b({onClick:go,style:{width:"100%",padding:"15px 0",borderRadius:14,fontWeight:900,fontSize:16,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`,boxShadow:`0 4px 20px ${t.accent}50`,marginTop:4}},"Get Started →")
       ),
-      d({style:{textAlign:"center",color:t.muted,fontSize:11,marginTop:14}},"All data stays on this device only.")
+      d({style:{textAlign:"center",color:t.muted,fontSize:11,marginTop:14}},"All data syncs to your Google account.")
     )
   );
 }
 
 function App(){
-  const [st,setSt]=useState(()=>ldSt());
+  const [user,setUser]=useState(undefined); // undefined=loading, null=signed out
+  const [st,setSt]=useState(null);
+  const [syncing,setSyncing]=useState(false);
   const [screen,setScreen]=useState("dashboard");
   const [tid,setTid]=useState(ldTid);
   const [undos,setUndos]=useState([]);
@@ -256,22 +296,91 @@ function App(){
   const [formErr,setFormErr]=useState("");
   const [editOwner,setEditOwner]=useState(false);
   const [ownerDraft,setOwnerDraft]=useState("");
-  const [editTx,setEditTx]=useState(null); // tx being edited
+  const [editTx,setEditTx]=useState(null);
+  const [fbReady,setFbReady]=useState(!!window._fbReady);
+  const saveTimer=useRef(null);
+  const listenUnsub=useRef(null);
   const T=THEMES[tid];
 
-  useEffect(()=>{if(st)svSt(st);},[st]);
+  // Wait for Firebase to load
+  useEffect(()=>{
+    if(fbReady)return;
+    const h=()=>setFbReady(true);
+    window.addEventListener("fbready",h);
+    return()=>window.removeEventListener("fbready",h);
+  },[fbReady]);
+
+  // Auth listener
+  useEffect(()=>{
+    if(!fbReady||!window._fbOnAuth)return;
+    return window._fbOnAuth(async u=>{
+      setUser(u||null);
+      if(u){
+        // Load data from Firestore
+        setSyncing(true);
+        try{
+          const remote=await window._fbLoad(u.uid);
+          if(remote){setSt(remote);svSt(remote);}
+          else{
+            const local=ldSt();
+            if(local){setSt(local);await window._fbSave(u.uid,local);}
+          }
+        }catch(err){const local=ldSt();if(local)setSt(local);}
+        setSyncing(false);
+        // Real-time listener
+        if(listenUnsub.current)listenUnsub.current();
+        listenUnsub.current=window._fbListen(u.uid,remote=>{
+          setSt(prev=>{
+            if(!prev||remote.updatedAt>=(prev.updatedAt||0))return remote;
+            return prev;
+          });
+        });
+      }else{
+        if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}
+        setSt(null);
+      }
+    });
+  },[fbReady]);
+
+  useEffect(()=>()=>{if(listenUnsub.current)listenUnsub.current();},[]);
   useEffect(()=>{svTid(tid);},[tid]);
+
+  const saveToCloud=useCallback((data)=>{
+    if(!user||!window._fbSave)return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>{
+      const withTs={...data,updatedAt:Date.now()};
+      svSt(withTs);
+      window._fbSave(user.uid,withTs).catch(()=>{});
+    },800);
+  },[user]);
+
+  const setStAndSave=useCallback(updater=>{
+    setSt(prev=>{
+      const next=typeof updater==="function"?updater(prev):updater;
+      saveToCloud(next);
+      return next;
+    });
+  },[saveToCloud]);
 
   const notify=useCallback((msg,ok=true)=>{setToast({msg,ok});setTimeout(()=>setToast(null),2500);},[]);
   const pushUndo=useCallback(x=>{setUndos(p=>[...p.slice(-49),x]);setRedos([]);},[]);
-  const undo=()=>{if(!undos.length)return;setRedos(r=>[...r,st]);setSt(undos[undos.length-1]);setUndos(u=>u.slice(0,-1));notify("Undo applied",false);};
-  const redo=()=>{if(!redos.length)return;setUndos(u=>[...u,st]);setSt(redos[redos.length-1]);setRedos(r=>r.slice(0,-1));notify("Redo applied",false);};
+  const undo=()=>{if(!undos.length)return;setRedos(r=>[...r,st]);setStAndSave(undos[undos.length-1]);setUndos(u=>u.slice(0,-1));notify("Undo applied",false);};
+  const redo=()=>{if(!redos.length)return;setUndos(u=>[...u,st]);setStAndSave(redos[redos.length-1]);setRedos(r=>r.slice(0,-1));notify("Redo applied",false);};
 
-  if(!st)return e(Setup,{onDone:x=>{setSt(x);svSt(x);}});
+  // Loading screen
+  if(user===undefined||(!fbReady&&!st)){
+    return d({style:{minHeight:"100vh",background:"#0f0f23",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}},
+      d({style:{fontSize:48}},"🏦"),
+      d({style:{color:"#00d7ff",fontWeight:700,fontSize:14}},syncing?"Syncing...":"Loading...")
+    );
+  }
 
-  // Recalculate all postBalances from scratch given a ledger
-  const recalcBalances=(ledger,initChecking,initSavings)=>{
-    let chk=initChecking,sv=initSavings;
+  if(!user)return e(SignInScreen,{t:T});
+  if(!st)return e(Setup,{t:T,onDone:x=>{setStAndSave(x);}});
+
+  const recalcBalances=(ledger)=>{
+    let chk=0,sv=st.savings;
     return ledger.map(tx=>{
       if(tx.type==="DEPOSIT")   chk+=tx.amount;
       if(tx.type==="WITHDRAWAL")chk-=tx.amount;
@@ -283,32 +392,24 @@ function App(){
 
   const saveTx=updated=>{
     pushUndo(st);
-    setSt(prev=>{
+    setStAndSave(prev=>{
       const idx=prev.ledger.findIndex(t=>t.id===updated.id);
       if(idx<0)return prev;
-      const newLedger=[...prev.ledger];
-      newLedger[idx]=updated;
-      // find opening balance (before first tx)
-      const firstTx=newLedger[0];
-      const initChk=firstTx?(firstTx.type==="DEPOSIT"?firstTx.postBalance-firstTx.amount:firstTx.postBalance+firstTx.amount):prev.checking;
-      const recalced=recalcBalances(newLedger,0,prev.savings);
-      const finalChk=recalced.length?recalced[recalced.length-1].postBalance:prev.checking;
-      return{...prev,checking:finalChk,ledger:recalced,balanceHistory:recalced.map(t=>t.postBalance).slice(-60)};
+      const nl=[...prev.ledger];nl[idx]=updated;
+      const rc=recalcBalances(nl);
+      return{...prev,checking:rc.length?rc[rc.length-1].postBalance:prev.checking,ledger:rc,balanceHistory:rc.map(t=>t.postBalance).slice(-60)};
     });
-    setEditTx(null);
-    notify("Transaction updated!");
+    setEditTx(null);notify("Transaction updated!");
   };
 
   const deleteTx=id=>{
     pushUndo(st);
-    setSt(prev=>{
-      const newLedger=prev.ledger.filter(t=>t.id!==id);
-      const recalced=recalcBalances(newLedger,0,prev.savings);
-      const finalChk=recalced.length?recalced[recalced.length-1].postBalance:0;
-      return{...prev,checking:finalChk,ledger:recalced,balanceHistory:recalced.map(t=>t.postBalance).slice(-60)};
+    setStAndSave(prev=>{
+      const nl=prev.ledger.filter(t=>t.id!==id);
+      const rc=recalcBalances(nl);
+      return{...prev,checking:rc.length?rc[rc.length-1].postBalance:0,ledger:rc,balanceHistory:rc.map(t=>t.postBalance).slice(-60)};
     });
-    setEditTx(null);
-    notify("Transaction deleted!");
+    setEditTx(null);notify("Transaction deleted!");
   };
 
   const submitTx=()=>{
@@ -317,7 +418,7 @@ function App(){
     if((form.type==="WITHDRAWAL"||form.type==="XFER-OUT")&&amt>st.checking+1e-9){setFormErr("Insufficient checking funds.");return;}
     if(form.type==="XFER-IN"&&amt>st.savings+1e-9){setFormErr("Insufficient savings funds.");return;}
     pushUndo(st);
-    setSt(prev=>{
+    setStAndSave(prev=>{
       let chk=prev.checking,sv=prev.savings;
       if(form.type==="DEPOSIT")   chk+=amt;
       if(form.type==="WITHDRAWAL")chk-=amt;
@@ -339,8 +440,10 @@ function App(){
   };
 
   const resetApp=()=>{
-    if(!window.confirm("Delete ALL data and start fresh? This cannot be undone."))return;
-    localStorage.removeItem(SK);setSt(null);setUndos([]);setRedos([]);
+    if(!window.confirm("Delete ALL data and start fresh?"))return;
+    localStorage.removeItem(SK);
+    if(user&&window._fbSave)window._fbSave(user.uid,null).catch(()=>{});
+    setSt(null);setUndos([]);setRedos([]);
   };
 
   const importCSV=ev=>{
@@ -359,9 +462,9 @@ function App(){
         if(!imported.length){notify("No valid rows found.",false);return;}
         if(!window.confirm(`Import ${imported.length} transactions? This will REPLACE your current ledger.`)){ev.target.value="";return;}
         pushUndo(st);
-        setSt(prev=>({...prev,checking:imported[imported.length-1].postBalance,nextId:imported.length+1,ledger:imported,balanceHistory:imported.map(t=>t.postBalance).slice(-60)}));
+        setStAndSave(prev=>({...prev,checking:imported[imported.length-1].postBalance,nextId:imported.length+1,ledger:imported,balanceHistory:imported.map(t=>t.postBalance).slice(-60)}));
         notify(`Imported ${imported.length} transactions!`);setScreen("dashboard");
-      }catch(err){notify("Import failed. Check CSV format.",false);}
+      }catch(err){notify("Import failed.",false);}
       ev.target.value="";
     };
     reader.readAsText(file);
@@ -385,8 +488,6 @@ function App(){
   return d({style:{minHeight:"100vh",background:T.panel2,color:T.text,fontFamily:"system-ui,sans-serif",maxWidth:600,margin:"0 auto",position:"relative"}},
     toast&&d({style:{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:9999,pointerEvents:"none",background:`linear-gradient(135deg,${T.h1},${T.h2})`,border:`1.5px solid ${toast.ok?T.good:T.warn}`,borderRadius:12,padding:"10px 22px",color:"#fff",fontWeight:700,fontSize:13,boxShadow:"0 8px 32px #00000080",whiteSpace:"nowrap"}},(toast.ok?"✅ ":"↩ ")+toast.msg),
     inp({type:"file",id:"csvImport",accept:".csv",onChange:importCSV,style:{display:"none"}}),
-
-    // EDIT MODAL
     editTx&&e(EditModal,{tx:editTx,t:T,onSave:saveTx,onDelete:deleteTx,onClose:()=>setEditTx(null)}),
 
     // HEADER
@@ -399,15 +500,19 @@ function App(){
             d({style:{color:"rgba(255,255,255,0.65)",fontSize:11}},
               editOwner
                 ? s({style:{display:"flex",gap:6,alignItems:"center"}},
-                    inp({value:ownerDraft,onChange:ev=>setOwnerDraft(ev.target.value),style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}`,borderRadius:6,color:"#fff",padding:"2px 6px",fontSize:11,outline:"none",width:120},autoFocus:true,onKeyDown:ev=>{if(ev.key==="Enter"){setSt(p=>({...p,owner:ownerDraft}));setEditOwner(false);}}}),
-                    b({onClick:()=>{setSt(p=>({...p,owner:ownerDraft}));setEditOwner(false);},style:{background:T.good,border:"none",borderRadius:5,padding:"2px 8px",fontWeight:700,fontSize:11,cursor:"pointer"}},"✓"),
+                    inp({value:ownerDraft,onChange:ev=>setOwnerDraft(ev.target.value),style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}`,borderRadius:6,color:"#fff",padding:"2px 6px",fontSize:11,outline:"none",width:120},autoFocus:true,onKeyDown:ev=>{if(ev.key==="Enter"){setStAndSave(p=>({...p,owner:ownerDraft}));setEditOwner(false);}}}),
+                    b({onClick:()=>{setStAndSave(p=>({...p,owner:ownerDraft}));setEditOwner(false);},style:{background:T.good,border:"none",borderRadius:5,padding:"2px 8px",fontWeight:700,fontSize:11,cursor:"pointer"}},"✓"),
                     b({onClick:()=>setEditOwner(false),style:{background:"transparent",border:"none",color:"rgba(255,255,255,0.5)",fontSize:16,cursor:"pointer"}},"✕")
                   )
                 : s({onClick:()=>{setOwnerDraft(st.owner);setEditOwner(true);},style:{cursor:"pointer"}},`${st.owner} · ****${st.accountNum} ✏️`)
             )
           )
         ),
-        b({onClick:()=>setShowTheme(p=>!p),style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}60`,color:"#fff",borderRadius:10,padding:"6px 12px",fontWeight:700,fontSize:11,cursor:"pointer"}},"🎨")
+        d({style:{display:"flex",gap:6,alignItems:"center"}},
+          syncing&&s({style:{color:"rgba(255,255,255,0.6)",fontSize:10}},"☁ syncing…"),
+          b({onClick:()=>setShowTheme(p=>!p),style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}60`,color:"#fff",borderRadius:10,padding:"6px 12px",fontWeight:700,fontSize:11,cursor:"pointer"}},"🎨"),
+          b({onClick:()=>window._fbSignOut&&window._fbSignOut(),style:{background:"rgba(0,0,0,0.3)",border:`1px solid rgba(255,255,255,0.2)`,color:"rgba(255,255,255,0.7)",borderRadius:10,padding:"6px 10px",fontWeight:700,fontSize:10,cursor:"pointer"}},"Sign out")
+        )
       ),
       d({style:{display:"flex",gap:8}},
         [["↩",undo,!undos.length,"Undo"],["↪",redo,!redos.length,"Redo"],["📥",exportCSV,false,"Export"],["📤",()=>document.getElementById("csvImport").click(),false,"Import"],["🗑",resetApp,false,"Reset"]].map(([ic,fn,dis,lb])=>
@@ -418,7 +523,6 @@ function App(){
       )
     ),
 
-    // THEME PICKER
     showTheme&&d({style:{margin:"10px 14px",background:T.panel,borderRadius:16,padding:16,border:`1px solid ${T.border}60`,boxShadow:"0 8px 32px #00000060"}},
       d({style:{color:T.accent,fontWeight:900,fontSize:11,letterSpacing:"0.14em",marginBottom:10}},"SELECT THEME"),
       d({style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}},
@@ -426,15 +530,12 @@ function App(){
       )
     ),
 
-    // BALANCE CARDS
     d({style:{display:"flex",gap:10,padding:"14px 14px 4px"}},
       e(BalCard,{label:"Checking",value:st.checking,icon:"💳",color:T.good,t:T,spark:st.balanceHistory}),
       e(BalCard,{label:"Savings", value:st.savings, icon:"🏦",color:T.accent,t:T})
     ),
 
-    // MAIN CONTENT
     d({style:{padding:"10px 14px 90px"}},
-
       screen==="dashboard"&&e(Fragment,null,
         d({style:{display:"flex",gap:10,marginBottom:14}},
           [["Money In",totalIn,T.good,"⬆"],["Money Out",totalOut,T.bad,"⬇"],["Net",totalIn-totalOut,totalIn-totalOut>=0?T.good:T.bad,"≈"]].map(([lb,val,col,ic])=>
@@ -451,12 +552,10 @@ function App(){
           st.ledger.length===0&&d({style:{padding:32,textAlign:"center",color:T.muted,fontSize:13,lineHeight:1.7}},"No transactions yet. Tap ➕ New to add one.")
         )
       ),
-
       screen==="ledger"&&e(GBox,{title:"Full Ledger",right:"Most recent first",t:T},
         ...[...st.ledger].reverse().map((tx,i)=>e(TxRow,{key:tx.id,tx,i,t:T,onTap:()=>setEditTx(tx)})),
         st.ledger.length===0&&d({style:{padding:24,textAlign:"center",color:T.muted,fontSize:13}},"No transactions yet.")
       ),
-
       screen==="new-tx"&&e(GBox,{title:"New Transaction",t:T},
         d({style:{padding:"20px 18px"}},
           formErr&&d({style:{background:T.bad+"22",color:T.bad,border:`1px solid ${T.bad}60`,borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700,marginBottom:16}},"⚠ "+formErr),
@@ -489,7 +588,6 @@ function App(){
           b({onClick:submitTx,style:{width:"100%",padding:"15px 0",borderRadius:14,fontWeight:900,fontSize:16,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${T.h1},${T.h2})`,boxShadow:`0 4px 20px ${T.accent}50`}},"✅ Record Transaction")
         )
       ),
-
       screen==="analytics"&&e(Fragment,null,
         e(GBox,{title:"Financial Summary",t:T},
           d({style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,padding:16}},
@@ -525,7 +623,6 @@ function App(){
           )
         )
       ),
-
       screen==="search"&&e(GBox,{title:"Search Transactions",t:T},
         d({style:{padding:"14px 16px"}},
           inp({type:"text",placeholder:"Search by category or note…",value:search,onChange:ev=>setSearch(ev.target.value),style:{...is,marginBottom:12},autoFocus:true}),
@@ -536,7 +633,6 @@ function App(){
       )
     ),
 
-    // BOTTOM NAV
     d({style:{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:600,background:T.panel,borderTop:`2px solid ${T.border}40`,display:"flex",boxShadow:"0 -4px 20px #00000080",zIndex:200,paddingBottom:"env(safe-area-inset-bottom,0px)"}},
       e(Tab,{id:"dashboard",label:"Home",      icon:"🏠"}),
       e(Tab,{id:"ledger",   label:"Ledger",    icon:"📋"}),
@@ -552,11 +648,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(e(App,null));
 </script>
 <script>
 if("serviceWorker" in navigator){
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(()=>{});
-  });
+  window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 }
 </script>
 </body>
 </html>
-
