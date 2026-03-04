@@ -37,39 +37,45 @@ input,button{font-family:inherit;}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:#444;border-radius:3px;}
 
-/* ── MOBILE (default, <720px) ── */
+/* ── CSS custom properties set from real screen size via JS ── */
+:root{
+  --sidebar-w: 0px;
+  --content-pad: 14px;
+  --bal-pad: 14px;
+  --is-desktop: 0;
+}
+
+/* ── MOBILE (default) ── */
 #app{display:flex;flex-direction:column;min-height:100vh;width:100%;}
-#sidenav{display:none;}
-#main{flex:1;}
+#sidenav{display:none;width:var(--sidebar-w);}
+#main{flex:1;min-width:0;}
 #bottomnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:200;}
-#content{padding:10px 14px 90px;}
-#balcards{padding:14px 14px 4px;}
+#content{padding:10px var(--content-pad) 90px;}
+#balcards{padding:12px var(--bal-pad) 4px;gap:10px;}
 
-/* ── TABLET (720px–1024px) ── */
-@media(min-width:720px){
-  #app{display:grid;grid-template-columns:200px 1fr;grid-template-rows:auto 1fr;min-height:100vh;width:100%;}
+/* ── DESKTOP (sidebar visible) ── */
+@media(min-width:600px){
+  #app{
+    display:grid;
+    grid-template-columns:var(--sidebar-w) 1fr;
+    grid-template-rows:auto 1fr;
+    min-height:100vh;
+  }
   #header{grid-column:1/3;grid-row:1;}
-  #sidenav{display:flex;flex-direction:column;grid-column:1;grid-row:2;padding:14px 8px;gap:2px;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.07);position:sticky;top:0;height:calc(100vh - 110px);}
+  #sidenav{
+    display:flex;flex-direction:column;
+    grid-column:1;grid-row:2;
+    overflow-y:auto;
+    border-right:1px solid rgba(255,255,255,0.07);
+    position:sticky;top:0;
+    height:calc(100vh - var(--header-h, 110px));
+    padding:calc(var(--content-pad) * 0.8) calc(var(--sidebar-w) * 0.06);
+    gap:3px;
+  }
   #main{grid-column:2;grid-row:2;overflow-y:auto;min-width:0;}
-  #balcards{padding:16px 20px 4px!important;}
-  #content{padding:10px 20px 40px!important;}
+  #balcards{padding:var(--bal-pad) var(--content-pad) 4px!important;}
+  #content{padding:10px var(--content-pad) 40px!important;}
   #bottomnav{display:none!important;}
-}
-
-/* ── DESKTOP (1024px–1400px) ── */
-@media(min-width:1024px){
-  #app{grid-template-columns:230px 1fr;}
-  #balcards{padding:20px 28px 4px!important;}
-  #content{padding:12px 28px 40px!important;}
-  #sidenav{padding:18px 12px;gap:4px;}
-}
-
-/* ── WIDE (1400px+) ── */
-@media(min-width:1400px){
-  #app{grid-template-columns:260px 1fr;max-width:1800px;margin:0 auto;}
-  #balcards{padding:24px 40px 4px!important;gap:20px!important;}
-  #content{padding:16px 40px 40px!important;}
-  #sidenav{padding:22px 16px;}
 }
 </style>
 </head>
@@ -529,6 +535,46 @@ ReactDOM.createRoot(document.getElementById("root")).render(e(App,null));
 </script>
 <script>
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));}
+</script>
+<script>
+(function(){
+  function applyLayout(){
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const r = document.documentElement;
+    const isMobile = vw < 600;
+
+    if(isMobile){
+      // Pure mobile — no sidebar
+      r.style.setProperty('--sidebar-w','0px');
+      r.style.setProperty('--content-pad','14px');
+      r.style.setProperty('--bal-pad','12px');
+    } else {
+      // Sidebar = 18% of screen width, clamped between 160px and 280px
+      const sw = Math.round(Math.min(280, Math.max(160, vw * 0.18)));
+      // Content padding = 2.5% of remaining width
+      const remaining = vw - sw;
+      const cp = Math.round(Math.min(48, Math.max(14, remaining * 0.025)));
+      const bp = Math.round(Math.min(32, Math.max(12, remaining * 0.018)));
+      r.style.setProperty('--sidebar-w', sw+'px');
+      r.style.setProperty('--content-pad', cp+'px');
+      r.style.setProperty('--bal-pad', bp+'px');
+    }
+
+    // Measure actual header height for sticky sidenav calc
+    const hdr = document.getElementById('header');
+    if(hdr){
+      r.style.setProperty('--header-h', hdr.offsetHeight+'px');
+    }
+  }
+
+  // Run immediately and on every resize
+  applyLayout();
+  window.addEventListener('resize', applyLayout);
+  // Re-run after React renders
+  window.addEventListener('load', applyLayout);
+  setTimeout(applyLayout, 300);
+})();
 </script>
 </body>
 </html>
