@@ -127,13 +127,12 @@ const CATS=["INCOME","GROCERIES","UTILITIES","DINING","FAST FOOD","HOUSING","BIL
 const f$=v=>{const n=v<0;const t=Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");return(n?"-$":"$")+t;};
 const fFull=ts=>{const dt=new Date(ts);return dt.toLocaleDateString("en-US",{month:"short",day:"2-digit",year:"numeric"})+" "+dt.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});};
 const fShort=ts=>new Date(ts).toLocaleDateString("en-US",{month:"short",day:"2-digit"});
-const SK="chk_v5",TK="chk_v5_tid",MK="chk_v5_mode";
+const SK="chk_v5",TK="chk_v5_tid";
 const ldSt=()=>{try{const x=localStorage.getItem(SK);return x?JSON.parse(x):null;}catch{return null;}};
 const svSt=x=>{try{localStorage.setItem(SK,JSON.stringify(x));}catch{}};
 const ldTid=()=>{try{return parseInt(localStorage.getItem(TK)||"0")||0;}catch{return 0;}};
 const svTid=i=>{try{localStorage.setItem(TK,String(i));}catch{}};
-const ldMode=()=>{try{return localStorage.getItem(MK)||"dark";}catch{return"dark";}};
-const svMode=m=>{try{localStorage.setItem(MK,m);}catch{}};
+
 
 // ─── UI PRIMITIVES ───────────────────────────────────────────────────────────
 
@@ -486,7 +485,7 @@ function App(){
   const [st,setSt]=useState(null);
   const [screen,setScreen]=useState("dashboard");
   const [tid,setTid]=useState(ldTid);
-  const [mode,setMode]=useState(ldMode);
+  
   const [undos,setUndos]=useState([]);
   const [redos,setRedos]=useState([]);
   const [search,setSearch]=useState("");
@@ -504,7 +503,7 @@ function App(){
   const listenUnsub=useRef(null);
   const T=THEMES[tid];
 
-  useEffect(()=>{document.body.setAttribute("data-mode",mode);svMode(mode);},[mode]);
+  
   useEffect(()=>{if(fbReady)return;const h=()=>setFbReady(true);window.addEventListener("fbready",h);return()=>window.removeEventListener("fbready",h);},[fbReady]);
 
   useEffect(()=>{
@@ -778,7 +777,7 @@ function App(){
         ),
         d({style:{display:"flex",gap:5,alignItems:"center"}},
           syncing&&s({style:{color:"rgba(255,255,255,0.45)",fontSize:10,marginRight:2}},"☁"),
-          b({onClick:()=>setMode(m=>m==="dark"?"light":"dark"),title:"Toggle light/dark",style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}50`,color:"#fff",borderRadius:8,padding:"5px 9px",fontSize:13,cursor:"pointer"}},mode==="dark"?"☀️":"🌙"),
+
           b({onClick:()=>setShowTheme(p=>!p),title:"Theme",style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}50`,color:"#fff",borderRadius:8,padding:"5px 9px",fontSize:13,cursor:"pointer"}},"🎨"),
           b({onClick:()=>window._fbSignOut&&window._fbSignOut(),style:{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.18)",color:"rgba(255,255,255,0.65)",borderRadius:8,padding:"5px 9px",fontWeight:700,fontSize:10,cursor:"pointer"}},"Sign out")
         )
