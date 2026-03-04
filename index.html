@@ -538,7 +538,7 @@ function App(){
                     background:i%2===0?T.panel:T.panel2,
                     borderBottom:`1px solid ${T.border}15`,
                   }},
-                    d({style:{width:34,height:34,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,background:col+"22",border:`1px solid ${col}50`}},isIn?"⬆":"⬇"),
+                    d({style:{width:34,height:34,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,flexShrink:0,background:col+"22",border:`1px solid ${col}50`,color:col,fontFamily:"monospace"}},tx.id),
                     d({style:{flex:1,minWidth:0}},
                       d({style:{fontWeight:700,fontSize:13,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},tx.note||tx.category),
                       d({style:{fontSize:11,color:T.muted,marginTop:2}},fShort(tx.when)+" · ",s({style:{color:col}},tx.category))
