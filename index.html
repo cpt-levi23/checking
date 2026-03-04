@@ -323,7 +323,7 @@ function Setup({onDone,t}){
 
 function App(){
   const vw=useWindowWidth();
-  const isDesktop=vw>=600;
+  const isDesktop=vw>=900;
   const [user,setUser]=useState(undefined);
   const [st,setSt]=useState(null);
   const [syncing,setSyncing]=useState(false);
@@ -695,7 +695,7 @@ if("serviceWorker" in navigator){
     const hdr = document.getElementById('header');
     if(!app) return;
 
-    if(vw >= 600){
+    if(vw >= 900){
       const sw = Math.round(Math.min(260, Math.max(180, vw * 0.17)));
       const cp = Math.round(Math.min(60, Math.max(20, (vw - sw) * 0.03)));
       const hw = hdr ? hdr.getBoundingClientRect().height : 110;
