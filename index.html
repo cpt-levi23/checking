@@ -23,9 +23,31 @@ const provider=new GoogleAuthProvider();
 window._fbSignIn=()=>signInWithPopup(auth,provider).catch(()=>signInWithRedirect(auth,provider));
 window._fbSignOut=()=>signOut(auth);
 window._fbOnAuth=cb=>onAuthStateChanged(auth,cb);
-window._fbSave=async(uid,data)=>{if(!data||!uid)return;try{await setDoc(doc(db,"users",uid),{state:JSON.stringify(data),updatedAt:Date.now()});}catch(e){console.error("Firestore save error:",e.code,e.message);}};
-window._fbLoad=async uid=>{try{const s=await getDoc(doc(db,"users",uid));if(s.exists()&&s.data().state){const p=JSON.parse(s.data().state);if(p&&p.owner)return p;}}catch(e){}return null;};
-window._fbListen=(uid,cb)=>onSnapshot(doc(db,"users",uid),s=>{if(s.exists()&&s.data().state){try{const p=JSON.parse(s.data().state);if(p&&p.owner)cb(p,s.data().updatedAt||0);}catch(e){}}});
+window._fbSave=async(uid,data)=>{
+  if(!data||!uid||!data.owner)return;
+  const ts=Date.now();
+  const withTs={...data,updatedAt:ts};
+  try{
+    await setDoc(doc(db,"users",uid),{state:JSON.stringify(withTs),updatedAt:ts});
+    console.log("☁ saved to Firebase",new Date().toLocaleTimeString());
+  }catch(e){console.error("Firebase save error:",e.code,e.message);}
+};
+window._fbLoad=async uid=>{
+  try{
+    const s=await getDoc(doc(db,"users",uid));
+    if(s.exists()&&s.data().state){
+      const p=JSON.parse(s.data().state);
+      if(p&&p.owner)return p;
+    }
+  }catch(e){console.error("Firebase load error:",e);}
+  return null;
+};
+window._fbListen=(uid,cb)=>onSnapshot(doc(db,"users",uid),s=>{
+  if(s.exists()&&s.data().state){
+    try{const p=JSON.parse(s.data().state);if(p&&p.owner)cb(p);}
+    catch(e){}
+  }
+});
 getRedirectResult(auth).catch(()=>{});
 window._fbReady=true;window.dispatchEvent(new Event("fbready"));
 </script>
@@ -37,41 +59,68 @@ input,button{font-family:inherit;}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:#444;border-radius:3px;}
 
-/* Layout driven entirely by JS setting data-layout attribute on #app */
-
-/* ── MOBILE ── */
-#app{display:flex;flex-direction:column;min-height:100vh;width:100%;}
+/* ── MOBILE (default) ── */
+html,body{width:100%;height:100%;}
+#app{display:flex;flex-direction:column;min-height:100vh;width:100%;box-sizing:border-box;}
 #sidenav{display:none;}
-#main{flex:1;min-width:0;}
+#main{flex:1;min-width:0;width:100%;}
 #bottomnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:200;}
-#content{padding:10px 14px 90px;}
-#balcards{display:flex;gap:10px;padding:12px 14px 4px;flex-wrap:wrap;}
+#content{padding:10px 14px 90px;width:100%;box-sizing:border-box;}
+#balcards{display:flex;gap:10px;padding:12px 14px 4px;}
 
-/* ── DESKTOP — triggered by JS adding data-layout="desktop" to #app ── */
+/* ── DESKTOP ── */
 #app[data-layout="desktop"]{
-  display:grid;
-  grid-template-columns:var(--sw,220px) 1fr;
-  grid-template-rows:auto 1fr;
+  display:grid !important;
+  grid-template-columns:var(--sw) 1fr !important;
+  grid-template-rows:auto 1fr !important;
   min-height:100vh;
+  width:100vw !important;
 }
-#app[data-layout="desktop"] #header{grid-column:1/3;grid-row:1;}
+#app[data-layout="desktop"] #header{
+  grid-column:1/3 !important;
+  grid-row:1 !important;
+  width:100% !important;
+}
 #app[data-layout="desktop"] #sidenav{
-  display:flex;flex-direction:column;
-  grid-column:1;grid-row:2;
+  display:flex !important;
+  flex-direction:column !important;
+  grid-column:1 !important;
+  grid-row:2 !important;
+  width:var(--sw) !important;
   overflow-y:auto;
   border-right:1px solid rgba(255,255,255,0.08);
-  height:calc(100vh - var(--hw,110px));
+  height:calc(100vh - var(--hw));
   position:sticky;top:0;
-  padding:16px 10px;gap:4px;
+  padding:20px 12px;
+  gap:6px;
+  box-sizing:border-box;
 }
 #app[data-layout="desktop"] #main{
-  grid-column:2;grid-row:2;
-  overflow-y:auto;min-width:0;
+  grid-column:2 !important;
+  grid-row:2 !important;
+  overflow-y:auto;
+  min-width:0;
+  width:100% !important;
+  box-sizing:border-box;
 }
-#app[data-layout="desktop"] #bottomnav{display:none;}
-#app[data-layout="desktop"] #content{padding:16px var(--cp,24px) 40px;}
-#app[data-layout="desktop"] #balcards{padding:20px var(--cp,24px) 4px;gap:16px;flex-wrap:nowrap;}
-#app[data-layout="desktop"] .gbox-inner{font-size:14px;}
+#app[data-layout="desktop"] #bottomnav{display:none !important;}
+#app[data-layout="desktop"] #content{
+  padding:20px var(--cp) 40px !important;
+  width:100% !important;
+  box-sizing:border-box !important;
+}
+#app[data-layout="desktop"] #balcards{
+  padding:20px var(--cp) 8px !important;
+  gap:20px !important;
+}
+/* Scale up UI elements on desktop */
+#app[data-layout="desktop"] #content input,
+#app[data-layout="desktop"] #content button{font-size:15px !important;}
+#app[data-layout="desktop"] #content input{padding:13px 16px !important;}
+#app[data-layout="desktop"] #sidenav button{
+  font-size:14px !important;
+  padding:12px 14px !important;
+}
 </style>
 </head>
 <body>
@@ -281,26 +330,34 @@ function App(){
 
   useEffect(()=>{if(fbReady)return;const h=()=>setFbReady(true);window.addEventListener("fbready",h);return()=>window.removeEventListener("fbready",h);},[fbReady]);
 
+  // Single auth+sync effect — Firebase is the ONLY source of truth
   useEffect(()=>{
     if(!fbReady||!window._fbOnAuth)return;
     return window._fbOnAuth(async u=>{
-      setUser(u||null);
       if(u){
+        setUser(u);
         setSyncing(true);
-        try{
-          const remote=await window._fbLoad(u.uid);
-          if(remote){
-            setSt(remote);svSt(remote);
-          } else {
-            const local=ldSt();
-            if(local){setSt(local);window._fbSave(u.uid,local);}
-          }
-        }catch(e){const local=ldSt();if(local)setSt(local);}
+        // Always load fresh from Firebase first
+        const remote=await window._fbLoad(u.uid);
+        if(remote){
+          setSt(remote);
+          svSt(remote); // update local cache
+        } else {
+          // First time — migrate from localStorage if exists
+          const local=ldSt();
+          if(local){setSt(local);await window._fbSave(u.uid,local);}
+        }
         setSyncing(false);
-        // NO real-time listener - causes overwrite bugs. Load once on sign-in is enough.
-      }else{
-        if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}
+        // Real-time listener: always accept what Firebase says
+        if(listenUnsub.current)listenUnsub.current();
+        listenUnsub.current=window._fbListen(u.uid,remote=>{
+          setSt(remote);
+          svSt(remote); // keep local cache fresh
+        });
+      } else {
+        setUser(null);
         setSt(null);
+        if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}
       }
     });
   },[fbReady]);
@@ -308,19 +365,17 @@ function App(){
   useEffect(()=>()=>{if(listenUnsub.current)listenUnsub.current();},[]);
   useEffect(()=>{svTid(tid);},[tid]);
 
-  // Use a ref so saveToCloud always has fresh uid without stale closure issues
   const userRef=useRef(user);
   useEffect(()=>{userRef.current=user;},[user]);
 
+  // Save: write to Firebase immediately, no debounce race
   const saveToCloud=useCallback((data)=>{
     const uid=userRef.current&&userRef.current.uid;
-    if(!uid||!window._fbSave||!data)return;
-    const withTs={...data,updatedAt:Date.now()};
-    svSt(withTs); // always save locally immediately
+    if(!uid||!data||!data.owner)return;
     clearTimeout(saveTimer.current);
     saveTimer.current=setTimeout(()=>{
-      window._fbSave(uid,withTs).then(()=>console.log("Saved to cloud")).catch(e=>console.error("Save failed:",e));
-    },800);
+      window._fbSave(uid,data);
+    },500);
   },[]);
 
   const setStAndSave=useCallback(updater=>{
@@ -558,30 +613,27 @@ if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.se
     const hdr = document.getElementById('header');
     if(!app) return;
 
-    const isDesktop = vw >= 600;
+    if(vw >= 600){
+      const sw = Math.round(Math.min(260, Math.max(180, vw * 0.17)));
+      const cp = Math.round(Math.min(60, Math.max(20, (vw - sw) * 0.03)));
+      const hw = hdr ? hdr.getBoundingClientRect().height : 110;
 
-    if(isDesktop){
-      // sidebar = 18vw, clamped 180px–280px
-      const sw = Math.round(Math.min(280, Math.max(180, vw * 0.18)));
-      // content padding = 2.8% of remaining space, clamped 16px–52px  
-      const cp = Math.round(Math.min(52, Math.max(16, (vw - sw) * 0.028)));
+      // Set CSS vars on root so grid columns see them
+      const root = document.documentElement;
+      root.style.setProperty('--sw', sw+'px');
+      root.style.setProperty('--cp', cp+'px');
+      root.style.setProperty('--hw', hw+'px');
+
       app.setAttribute('data-layout','desktop');
-      app.style.setProperty('--sw', sw+'px');
-      app.style.setProperty('--cp', cp+'px');
-      if(hdr) app.style.setProperty('--hw', hdr.offsetHeight+'px');
     } else {
       app.setAttribute('data-layout','mobile');
-      app.style.removeProperty('--sw');
-      app.style.removeProperty('--cp');
     }
   }
 
-  // Run now, on every resize, and after React paints
   applyLayout();
   window.addEventListener('resize', applyLayout);
   window.addEventListener('load', applyLayout);
-  // Re-run a few times to catch React render
-  [100, 300, 600].forEach(t => setTimeout(applyLayout, t));
+  [50, 200, 500, 1000].forEach(t => setTimeout(applyLayout, t));
 })();
 </script>
 </body>
