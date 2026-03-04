@@ -37,21 +37,39 @@ input,button{font-family:inherit;}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:#444;border-radius:3px;}
 
-/* ── MOBILE (default) ── */
-#app{display:flex;flex-direction:column;min-height:100vh;}
+/* ── MOBILE (default, <720px) ── */
+#app{display:flex;flex-direction:column;min-height:100vh;width:100%;}
 #sidenav{display:none;}
+#main{flex:1;}
 #bottomnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:200;}
 #content{padding:10px 14px 90px;}
+#balcards{padding:14px 14px 4px;}
 
-/* ── DESKTOP ── */
+/* ── TABLET (720px–1024px) ── */
 @media(min-width:720px){
-  #app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:auto 1fr;min-height:100vh;}
+  #app{display:grid;grid-template-columns:200px 1fr;grid-template-rows:auto 1fr;min-height:100vh;width:100%;}
   #header{grid-column:1/3;grid-row:1;}
-  #sidenav{display:flex;flex-direction:column;grid-column:1;grid-row:2;padding:16px 10px;gap:4px;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.07);position:sticky;top:0;height:calc(100vh - 110px);}
-  #main{grid-column:2;grid-row:2;overflow-y:auto;}
-  #balcards{padding:20px 28px 8px!important;}
-  #content{padding:12px 28px 40px!important;}
+  #sidenav{display:flex;flex-direction:column;grid-column:1;grid-row:2;padding:14px 8px;gap:2px;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.07);position:sticky;top:0;height:calc(100vh - 110px);}
+  #main{grid-column:2;grid-row:2;overflow-y:auto;min-width:0;}
+  #balcards{padding:16px 20px 4px!important;}
+  #content{padding:10px 20px 40px!important;}
   #bottomnav{display:none!important;}
+}
+
+/* ── DESKTOP (1024px–1400px) ── */
+@media(min-width:1024px){
+  #app{grid-template-columns:230px 1fr;}
+  #balcards{padding:20px 28px 4px!important;}
+  #content{padding:12px 28px 40px!important;}
+  #sidenav{padding:18px 12px;gap:4px;}
+}
+
+/* ── WIDE (1400px+) ── */
+@media(min-width:1400px){
+  #app{grid-template-columns:260px 1fr;max-width:1800px;margin:0 auto;}
+  #balcards{padding:24px 40px 4px!important;gap:20px!important;}
+  #content{padding:16px 40px 40px!important;}
+  #sidenav{padding:22px 16px;}
 }
 </style>
 </head>
@@ -488,7 +506,7 @@ function App(){
           THEMES.map((th,i)=>b({key:i,onClick:()=>{setTid(i);setShowTheme(false);},style:{background:`linear-gradient(135deg,${th.h1},${th.h2})`,border:i===tid?"2.5px solid #fff":"1.5px solid transparent",borderRadius:10,padding:"8px 10px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",textAlign:"left"}},th.name))
         )
       ),
-      d({id:"balcards",style:{display:"flex",gap:10,padding:"14px 14px 4px"}},
+      d({id:"balcards",style:{display:"flex",gap:10,padding:"14px 14px 4px",flexWrap:"wrap"}},
         e(BalCard,{label:"Checking",value:st.checking,icon:"💳",color:T.good,t:T,spark:st.balanceHistory}),
         e(BalCard,{label:"Savings",value:st.savings,icon:"🏦",color:T.accent,t:T})
       ),
