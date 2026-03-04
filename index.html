@@ -41,15 +41,23 @@ window._fbSignIn=()=>{
 window._fbSignOut=()=>signOut(auth);
 window._fbOnAuth=cb=>onAuthStateChanged(auth,cb);
 window._fbSave=async(uid,data)=>{
+  if(!data)return;
   await setDoc(doc(db,"users",uid),{state:JSON.stringify(data),updatedAt:Date.now()});
 };
 window._fbLoad=async uid=>{
-  const snap=await getDoc(doc(db,"users",uid));
-  if(snap.exists()){const d=snap.data();return d.state?JSON.parse(d.state):null;}
+  try{
+    const snap=await getDoc(doc(db,"users",uid));
+    if(snap.exists()&&snap.data().state){
+      const p=JSON.parse(snap.data().state);
+      if(p&&p.owner)return p;
+    }
+  }catch(e){}
   return null;
 };
 window._fbListen=(uid,cb)=>onSnapshot(doc(db,"users",uid),snap=>{
-  if(snap.exists()&&snap.data().state)cb(JSON.parse(snap.data().state));
+  if(snap.exists()&&snap.data().state){
+    try{const p=JSON.parse(snap.data().state);if(p&&p.owner)cb(p,snap.data().updatedAt||0);}catch(e){}
+  }
 });
 
 // Handle redirect result on page load
@@ -327,11 +335,13 @@ function App(){
           }
         }catch(err){const local=ldSt();if(local)setSt(local);}
         setSyncing(false);
-        // Real-time listener
+        // Real-time listener - only update if remote is newer
         if(listenUnsub.current)listenUnsub.current();
-        listenUnsub.current=window._fbListen(u.uid,remote=>{
+        listenUnsub.current=window._fbListen(u.uid,(remote,remoteTs)=>{
           setSt(prev=>{
-            if(!prev||remote.updatedAt>=(prev.updatedAt||0))return remote;
+            if(!prev)return remote;
+            const localTs=prev.updatedAt||0;
+            if(remoteTs>localTs)return remote;
             return prev;
           });
         });
@@ -346,19 +356,19 @@ function App(){
   useEffect(()=>{svTid(tid);},[tid]);
 
   const saveToCloud=useCallback((data)=>{
-    if(!user||!window._fbSave)return;
+    if(!user||!window._fbSave||!data)return;
     clearTimeout(saveTimer.current);
+    const withTs={...data,updatedAt:Date.now()};
+    svSt(withTs);
     saveTimer.current=setTimeout(()=>{
-      const withTs={...data,updatedAt:Date.now()};
-      svSt(withTs);
       window._fbSave(user.uid,withTs).catch(()=>{});
-    },800);
+    },1000);
   },[user]);
 
   const setStAndSave=useCallback(updater=>{
     setSt(prev=>{
       const next=typeof updater==="function"?updater(prev):updater;
-      saveToCloud(next);
+      if(next)saveToCloud(next);
       return next;
     });
   },[saveToCloud]);
