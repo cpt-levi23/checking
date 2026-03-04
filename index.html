@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <title>Checking Account</title>
@@ -11,77 +11,47 @@
 <link rel="apple-touch-icon" href="/icon.svg"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<!-- Firebase -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,signInWithPopup,signInWithRedirect,getRedirectResult,GoogleAuthProvider,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,doc,setDoc,onSnapshot,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCf8YVpGcKsv5jVS_Sil-huIALbGPbuP7c",
-  authDomain: "checkingapp-9f160.firebaseapp.com",
-  projectId: "checkingapp-9f160",
-  storageBucket: "checkingapp-9f160.firebasestorage.app",
-  messagingSenderId: "960468279049",
-  appId: "1:960468279049:web:05ec7ab471e2d1805fbdd8"
-};
-
+const firebaseConfig={apiKey:"AIzaSyCf8YVpGcKsv5jVS_Sil-huIALbGPbuP7c",authDomain:"checkingapp-9f160.firebaseapp.com",projectId:"checkingapp-9f160",storageBucket:"checkingapp-9f160.firebasestorage.app",messagingSenderId:"960468279049",appId:"1:960468279049:web:05ec7ab471e2d1805fbdd8"};
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
 const provider=new GoogleAuthProvider();
-
-window._fbAuth=auth;
-window._fbDb=db;
-window._fbProvider=provider;
-window._fbSignIn=()=>{
-  // Try popup first, fall back to redirect on mobile
-  signInWithPopup(auth,provider).catch(()=>signInWithRedirect(auth,provider));
-};
+window._fbSignIn=()=>signInWithPopup(auth,provider).catch(()=>signInWithRedirect(auth,provider));
 window._fbSignOut=()=>signOut(auth);
 window._fbOnAuth=cb=>onAuthStateChanged(auth,cb);
-window._fbSave=async(uid,data)=>{
-  if(!data)return;
-  await setDoc(doc(db,"users",uid),{state:JSON.stringify(data),updatedAt:Date.now()});
-};
-window._fbLoad=async uid=>{
-  try{
-    const snap=await getDoc(doc(db,"users",uid));
-    if(snap.exists()&&snap.data().state){
-      const p=JSON.parse(snap.data().state);
-      if(p&&p.owner)return p;
-    }
-  }catch(e){}
-  return null;
-};
-window._fbListen=(uid,cb)=>onSnapshot(doc(db,"users",uid),snap=>{
-  if(snap.exists()&&snap.data().state){
-    try{const p=JSON.parse(snap.data().state);if(p&&p.owner)cb(p,snap.data().updatedAt||0);}catch(e){}
-  }
-});
-
-// Handle redirect result on page load
+window._fbSave=async(uid,data)=>{if(!data)return;await setDoc(doc(db,"users",uid),{state:JSON.stringify(data),updatedAt:Date.now()});};
+window._fbLoad=async uid=>{try{const s=await getDoc(doc(db,"users",uid));if(s.exists()&&s.data().state){const p=JSON.parse(s.data().state);if(p&&p.owner)return p;}}catch(e){}return null;};
+window._fbListen=(uid,cb)=>onSnapshot(doc(db,"users",uid),s=>{if(s.exists()&&s.data().state){try{const p=JSON.parse(s.data().state);if(p&&p.owner)cb(p,s.data().updatedAt||0);}catch(e){}}});
 getRedirectResult(auth).catch(()=>{});
-
-window._fbReady=true;
-window.dispatchEvent(new Event("fbready"));
+window._fbReady=true;window.dispatchEvent(new Event("fbready"));
 </script>
 <style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{margin:0;padding:0;background:#0f0f23;overscroll-behavior:none;}
-input,button{font-family:system-ui,sans-serif;}
-input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
-::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#444;border-radius:3px;}
-.app-shell{width:100%;max-width:100%!important;}
-.app-sidenav{display:none;}
-.app-bottomnav{display:flex;}
-@media(min-width:700px){
-  .app-shell{display:grid!important;grid-template-columns:240px 1fr!important;grid-template-rows:auto 1fr!important;min-height:100vh!important;max-width:100%!important;}
-  .app-header{grid-column:1/3!important;grid-row:1!important;}
-  .app-sidenav{grid-column:1!important;grid-row:2!important;border-right:1px solid rgba(255,255,255,0.08);display:flex!important;flex-direction:column!important;padding:20px 12px!important;gap:4px!important;height:calc(100vh - 130px)!important;overflow-y:auto!important;position:sticky!important;top:0!important;}
-  .app-content{grid-column:2!important;grid-row:2!important;padding:24px 32px 40px!important;max-width:100%!important;}
-  .app-bottomnav{display:none!important;}
-  .bal-cards{gap:20px!important;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+html,body{height:100%;background:#0f0f23;}
+body{overscroll-behavior:none;font-family:system-ui,sans-serif;}
+input,button{font-family:inherit;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:#444;border-radius:3px;}
+
+/* ── MOBILE (default) ── */
+#app{display:flex;flex-direction:column;min-height:100vh;}
+#sidenav{display:none;}
+#bottomnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:200;}
+#content{padding:10px 14px 90px;}
+
+/* ── DESKTOP ── */
+@media(min-width:720px){
+  #app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:auto 1fr;min-height:100vh;}
+  #header{grid-column:1/3;grid-row:1;}
+  #sidenav{display:flex;flex-direction:column;grid-column:1;grid-row:2;padding:16px 10px;gap:4px;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.07);position:sticky;top:0;height:calc(100vh - 110px);}
+  #main{grid-column:2;grid-row:2;overflow-y:auto;}
+  #balcards{padding:20px 28px 8px!important;}
+  #content{padding:12px 28px 40px!important;}
+  #bottomnav{display:none!important;}
 }
 </style>
 </head>
@@ -121,12 +91,10 @@ const THEMES=[
 const CC={INCOME:"#00ff87",GROCERIES:"#ffd700",UTILITIES:"#ff8700",DINING:"#ff6eb4",HOUSING:"#87afff",TRANSFER:"#00d7ff",BILLS:"#ff875f",SAVINGS:"#87d75f",ENTERTAINMENT:"#bf87ff",GAS:"#ffbf00",HEALTH:"#ff87af",WALMART:"#0071ce",PRICECHOPPER:"#e8000d",GASSTATION:"#ff6600",ONEFINANCE:"#00c8a0",USCONNECT:"#5b7fcd",STREAMING:"#e50914",CLUBCW:"#7b2d8b","STREAMING SVC":"#ff5f87",SUBSCRIPTIONS:"#a78bfa",ATM:"#facc15",UNCAT:"#808080"};
 const cc=c=>CC[(c||"").toUpperCase()]||"#a0a0a0";
 const CATS=["INCOME","GROCERIES","UTILITIES","DINING","HOUSING","BILLS","TRANSFER","SAVINGS","ENTERTAINMENT","GAS","HEALTH","WALMART","PRICECHOPPER","GASSTATION","ONEFINANCE","USCONNECT","STREAMING","CLUBCW","STREAMING SVC","SUBSCRIPTIONS","ATM","UNCAT"];
-
 const f$=v=>{const n=v<0;const t=Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");return(n?"-$":"$")+t;};
 const fFull=ts=>{const dt=new Date(ts);return dt.toLocaleDateString("en-US",{month:"short",day:"2-digit",year:"numeric"})+" "+dt.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});};
 const fShort=ts=>new Date(ts).toLocaleDateString("en-US",{month:"short",day:"2-digit"});
-
-const SK="chk_v3_state",TK="chk_v3_theme";
+const SK="chk_v4_state",TK="chk_v4_theme";
 const ldSt=()=>{try{const x=localStorage.getItem(SK);return x?JSON.parse(x):null;}catch{return null;}};
 const svSt=x=>{try{localStorage.setItem(SK,JSON.stringify(x));}catch{}};
 const ldTid=()=>{try{return parseInt(localStorage.getItem(TK)||"0")||0;}catch{return 0;}};
@@ -193,59 +161,42 @@ function TxRow({tx,i,t,onTap}){
       d({style:{fontWeight:900,fontSize:14,color:isIn?t.good:t.bad}},(isIn?"+":"-")+f$(tx.amount)),
       d({style:{fontSize:10,color:t.muted}},"Bal "+f$(tx.postBalance))
     ),
-    s({style:{fontSize:14,color:t.muted,marginLeft:4}},"✏️")
+    s({style:{fontSize:13,color:t.muted,marginLeft:4}},"✏️")
   );
 }
 
 function EditModal({tx,t,onSave,onDelete,onClose}){
   const [form,setForm]=useState({type:tx.type,amount:String(tx.amount),category:tx.category,note:tx.note||""});
   const [err,setErr]=useState("");
-  const is={background:t.panel2,color:t.text,border:`1px solid ${t.border}60`,borderRadius:12,padding:"11px 14px",fontSize:14,outline:"none",width:"100%",fontFamily:"inherit",boxSizing:"border-box"};
-  const save=()=>{
-    const amt=parseFloat(form.amount);
-    if(!amt||amt<=0){setErr("Enter a valid positive amount.");return;}
-    onSave({...tx,type:form.type,amount:amt,category:form.category,note:form.note});
-  };
+  const is={background:t.panel2,color:t.text,border:`1px solid ${t.border}60`,borderRadius:12,padding:"11px 14px",fontSize:14,outline:"none",width:"100%",fontFamily:"inherit"};
+  const save=()=>{const amt=parseFloat(form.amount);if(!amt||amt<=0){setErr("Enter a valid amount.");return;}onSave({...tx,type:form.type,amount:amt,category:form.category,note:form.note});};
   const del=()=>{if(window.confirm("Delete this transaction?"))onDelete(tx.id);};
   return d({style:{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}},
     d({style:{position:"absolute",inset:0,background:"rgba(0,0,0,0.7)"},onClick:onClose}),
     d({style:{position:"relative",width:"100%",maxWidth:600,background:t.panel,borderRadius:"20px 20px 0 0",padding:"0 0 40px",boxShadow:"0 -8px 40px #00000080",maxHeight:"90vh",overflowY:"auto"}},
       d({style:{display:"flex",justifyContent:"center",padding:"12px 0 4px"}},d({style:{width:40,height:4,borderRadius:99,background:t.border+"80"}})),
-      d({style:{background:`linear-gradient(135deg,${t.h1},${t.h2})`,padding:"12px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},
+      d({style:{background:`linear-gradient(135deg,${t.h1},${t.h2})`,padding:"12px 18px",display:"flex",justifyContent:"space-between",alignItems:"center"}},
         s({style:{color:"#fff",fontWeight:900,fontSize:13,letterSpacing:"0.1em"}},"EDIT TRANSACTION"),
         b({onClick:onClose,style:{background:"rgba(0,0,0,0.3)",border:"none",color:"#fff",borderRadius:8,padding:"4px 10px",fontSize:16,cursor:"pointer"}},"✕")
       ),
       d({style:{padding:"16px 18px",display:"flex",flexDirection:"column",gap:14}},
         err&&d({style:{background:t.bad+"22",color:t.bad,border:`1px solid ${t.bad}60`,borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700}},"⚠ "+err),
-        d(null,
-          d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"TYPE"),
+        d(null,d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"TYPE"),
           d({style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
             [{val:"DEPOSIT",lbl:"Deposit",ic:"⬆",col:t.good},{val:"WITHDRAWAL",lbl:"Withdrawal",ic:"⬇",col:t.bad},{val:"XFER-OUT",lbl:"To Savings",ic:"→",col:t.warn},{val:"XFER-IN",lbl:"From Savings",ic:"←",col:t.accent}].map(({val,lbl,ic,col})=>{
               const act=form.type===val;
-              return b({key:val,onClick:()=>setForm(p=>({...p,type:val})),style:{background:act?`linear-gradient(135deg,${t.h1},${t.h2})`:t.panel2,color:act?"#fff":col,border:act?`2px solid ${t.accent}`:`1.5px solid ${col}50`,borderRadius:13,padding:"11px 6px",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:act?`0 0 14px ${t.accent}50`:"none"}},s({style:{fontSize:16}},ic),lbl);
+              return b({key:val,onClick:()=>setForm(p=>({...p,type:val})),style:{background:act?`linear-gradient(135deg,${t.h1},${t.h2})`:t.panel2,color:act?"#fff":col,border:act?`2px solid ${t.accent}`:`1.5px solid ${col}50`,borderRadius:13,padding:"11px 6px",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}},s({style:{fontSize:16}},ic),lbl);
             })
           )
         ),
-        d(null,
-          d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"AMOUNT"),
-          inp({type:"number",placeholder:"0.00",value:form.amount,min:"0",step:"0.01",onChange:ev=>setForm(p=>({...p,amount:ev.target.value})),style:{...is,fontSize:20,fontWeight:900,color:t.good}})
+        d(null,d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"AMOUNT"),inp({type:"number",placeholder:"0.00",value:form.amount,min:"0",step:"0.01",onChange:ev=>setForm(p=>({...p,amount:ev.target.value})),style:{...is,fontSize:20,fontWeight:900,color:t.good}})),
+        d(null,d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"CATEGORY"),
+          d({style:{display:"flex",flexWrap:"wrap",gap:6}},CATS.map(c=>{const act=form.category===c,col=cc(c);return b({key:c,onClick:()=>setForm(p=>({...p,category:c})),style:{padding:"5px 11px",borderRadius:20,fontWeight:700,fontSize:11,cursor:"pointer",background:act?col+"30":t.panel2,color:act?col:t.muted,border:act?`1.5px solid ${col}`:`1px solid ${t.border}40`}},c);}))
         ),
-        d(null,
-          d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"CATEGORY"),
-          d({style:{display:"flex",flexWrap:"wrap",gap:6}},
-            CATS.map(c=>{
-              const act=form.category===c,col=cc(c);
-              return b({key:c,onClick:()=>setForm(p=>({...p,category:c})),style:{padding:"5px 11px",borderRadius:20,fontWeight:700,fontSize:11,cursor:"pointer",background:act?col+"30":t.panel2,color:act?col:t.muted,border:act?`1.5px solid ${col}`:`1px solid ${t.border}40`}},c);
-            })
-          )
-        ),
-        d(null,
-          d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},e(Fragment,null,"NOTE ",s({style:{color:t.muted,fontWeight:400}},"(optional)"))),
-          inp({type:"text",placeholder:"e.g. Grocery run…",value:form.note,onChange:ev=>setForm(p=>({...p,note:ev.target.value})),style:is})
-        ),
-        d({style:{display:"flex",gap:10,marginTop:4}},
-          b({onClick:del,style:{flex:"0 0 auto",padding:"13px 18px",borderRadius:13,fontWeight:700,fontSize:14,color:t.bad,cursor:"pointer",border:`1.5px solid ${t.bad}50`,background:t.bad+"15"}},"🗑 Delete"),
-          b({onClick:save,style:{flex:1,padding:"14px 0",borderRadius:13,fontWeight:900,fontSize:15,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`,boxShadow:`0 4px 18px ${t.accent}50`}},"✅ Save Changes")
+        d(null,d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"NOTE (optional)"),inp({type:"text",value:form.note,onChange:ev=>setForm(p=>({...p,note:ev.target.value})),style:is})),
+        d({style:{display:"flex",gap:10}},
+          b({onClick:del,style:{padding:"13px 18px",borderRadius:13,fontWeight:700,fontSize:14,color:t.bad,cursor:"pointer",border:`1.5px solid ${t.bad}50`,background:t.bad+"15"}},"🗑 Delete"),
+          b({onClick:save,style:{flex:1,padding:"14px 0",borderRadius:13,fontWeight:900,fontSize:15,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`}},"✅ Save Changes")
         )
       )
     )
@@ -253,55 +204,43 @@ function EditModal({tx,t,onSave,onDelete,onClose}){
 }
 
 function SignInScreen({t}){
-  return d({style:{minHeight:"100vh",background:t.panel2,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"system-ui,sans-serif"}},
+  return d({style:{minHeight:"100vh",background:t.panel2,display:"flex",alignItems:"center",justifyContent:"center",padding:24}},
     d({style:{textAlign:"center",maxWidth:360}},
-      d({style:{fontSize:60,marginBottom:16}},"🏦"),
-      d({style:{color:"#fff",fontWeight:900,fontSize:22,marginBottom:8}},"CHECKING ACCOUNT"),
-      d({style:{color:t.muted,fontSize:13,marginBottom:32,lineHeight:1.6}},"Sign in with Google to sync your data across all your devices automatically."),
-      b({onClick:()=>window._fbSignIn&&window._fbSignIn(),style:{display:"flex",alignItems:"center",justifyContent:"center",gap:12,width:"100%",padding:"15px 20px",borderRadius:14,fontWeight:700,fontSize:15,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`,boxShadow:`0 4px 20px ${t.accent}50`}},
-        s({style:{fontSize:20}},"🔑"),"Sign in with Google"
-      ),
-      d({style:{color:t.muted,fontSize:11,marginTop:16}})
+      d({style:{fontSize:64,marginBottom:16}},"🏦"),
+      d({style:{color:"#fff",fontWeight:900,fontSize:24,marginBottom:8}},"Checking Account"),
+      d({style:{color:t.muted,fontSize:14,marginBottom:32,lineHeight:1.6}},"Sign in with Google to sync your data across all your devices."),
+      b({onClick:()=>window._fbSignIn&&window._fbSignIn(),style:{display:"flex",alignItems:"center",justifyContent:"center",gap:12,width:"100%",padding:"16px 20px",borderRadius:14,fontWeight:700,fontSize:16,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`,boxShadow:`0 4px 20px ${t.accent}40`}},"🔑 Sign in with Google")
     )
   );
 }
 
 function Setup({onDone,t}){
-  const [name,setName]=useState("");
-  const [digits,setDigits]=useState("");
-  const [chk,setChk]=useState("");
-  const [sav,setSav]=useState("");
-  const [err,setErr]=useState("");
-  const is={background:t.panel2,color:t.text,border:`1px solid ${t.border}60`,borderRadius:12,padding:"12px 14px",fontSize:15,outline:"none",width:"100%",fontFamily:"inherit"};
+  const [name,setName]=useState("");const [digits,setDigits]=useState("");const [chk,setChk]=useState("");const [sav,setSav]=useState("");const [err,setErr]=useState("");
+  const is={background:t.panel2,color:t.text,border:`1px solid ${t.border}60`,borderRadius:12,padding:"12px 14px",fontSize:15,outline:"none",width:"100%"};
   const go=()=>{
     if(!name.trim()){setErr("Please enter your name.");return;}
     const c=parseFloat(chk)||0,sv=parseFloat(sav)||0,now=Date.now(),ledger=[];
     if(c>0)ledger.push({id:1,when:now,type:"DEPOSIT",amount:c,category:"INCOME",note:"Opening balance",postBalance:c});
     onDone({owner:name.trim(),accountNum:digits.trim()||"0000",checking:c,savings:sv,nextId:ledger.length+1,ledger,balanceHistory:[c]});
   };
-  const field=(lbl,el)=>d({style:{display:"flex",flexDirection:"column",gap:8}},d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em"}},lbl),el);
-  return d({style:{minHeight:"100vh",background:t.panel2,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 20px",fontFamily:"system-ui,sans-serif"}},
+  const fld=(lbl,el)=>d({style:{display:"flex",flexDirection:"column",gap:8}},d({style:{color:t.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em"}},lbl),el);
+  return d({style:{minHeight:"100vh",background:t.panel2,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 20px"}},
     d({style:{width:"100%",maxWidth:420}},
-      d({style:{textAlign:"center",marginBottom:28}},
-        d({style:{fontSize:54,marginBottom:10}},"🏦"),
-        d({style:{color:"#fff",fontWeight:900,fontSize:22,letterSpacing:"0.04em"}},"CHECKING ACCOUNT"),
-        d({style:{color:t.muted,fontSize:13,marginTop:6}},"Enter your details to get started")
-      ),
+      d({style:{textAlign:"center",marginBottom:28}},d({style:{fontSize:54,marginBottom:10}},"🏦"),d({style:{color:"#fff",fontWeight:900,fontSize:22}},"CHECKING ACCOUNT"),d({style:{color:t.muted,fontSize:13,marginTop:6}},"Enter your details to get started")),
       err&&d({style:{background:t.bad+"22",color:t.bad,border:`1px solid ${t.bad}60`,borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700,marginBottom:14}},"⚠ "+err),
       d({style:{background:t.panel,borderRadius:18,padding:24,border:`1px solid ${t.border}40`,boxShadow:"0 8px 40px #00000080",display:"flex",flexDirection:"column",gap:16}},
-        field("YOUR NAME",inp({placeholder:"e.g. Jamie Smith",value:name,onChange:ev=>setName(ev.target.value),style:is,autoFocus:true,onKeyDown:ev=>ev.key==="Enter"&&go()})),
-        field(e(Fragment,null,"ACCOUNT LAST 4 ",s({style:{color:t.muted,fontWeight:400}},"(optional)")),inp({placeholder:"e.g. 4821",maxLength:4,value:digits,onChange:ev=>setDigits(ev.target.value.replace(/\D/g,"")),style:is})),
-        field("CURRENT CHECKING BALANCE",inp({type:"number",placeholder:"0.00",min:"0",step:"0.01",value:chk,onChange:ev=>setChk(ev.target.value),style:is})),
-        field(e(Fragment,null,"SAVINGS BALANCE ",s({style:{color:t.muted,fontWeight:400}},"(optional)")),inp({type:"number",placeholder:"0.00",min:"0",step:"0.01",value:sav,onChange:ev=>setSav(ev.target.value),style:is})),
-        b({onClick:go,style:{width:"100%",padding:"15px 0",borderRadius:14,fontWeight:900,fontSize:16,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`,boxShadow:`0 4px 20px ${t.accent}50`,marginTop:4}},"Get Started →")
-      ),
-      d({style:{textAlign:"center",color:t.muted,fontSize:11,marginTop:14}},"All data syncs to your Google account.")
+        fld("YOUR NAME",inp({placeholder:"e.g. Jamie Smith",value:name,onChange:ev=>setName(ev.target.value),style:is,autoFocus:true,onKeyDown:ev=>ev.key==="Enter"&&go()})),
+        fld("ACCOUNT LAST 4 (optional)",inp({placeholder:"e.g. 4821",maxLength:4,value:digits,onChange:ev=>setDigits(ev.target.value.replace(/\D/g,"")),style:is})),
+        fld("CURRENT CHECKING BALANCE",inp({type:"number",placeholder:"0.00",min:"0",step:"0.01",value:chk,onChange:ev=>setChk(ev.target.value),style:is})),
+        fld("SAVINGS BALANCE (optional)",inp({type:"number",placeholder:"0.00",min:"0",step:"0.01",value:sav,onChange:ev=>setSav(ev.target.value),style:is})),
+        b({onClick:go,style:{width:"100%",padding:"15px 0",borderRadius:14,fontWeight:900,fontSize:16,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`}},"Get Started →")
+      )
     )
   );
 }
 
 function App(){
-  const [user,setUser]=useState(undefined); // undefined=loading, null=signed out
+  const [user,setUser]=useState(undefined);
   const [st,setSt]=useState(null);
   const [syncing,setSyncing]=useState(false);
   const [screen,setScreen]=useState("dashboard");
@@ -321,45 +260,21 @@ function App(){
   const listenUnsub=useRef(null);
   const T=THEMES[tid];
 
-  // Wait for Firebase to load
-  useEffect(()=>{
-    if(fbReady)return;
-    const h=()=>setFbReady(true);
-    window.addEventListener("fbready",h);
-    return()=>window.removeEventListener("fbready",h);
-  },[fbReady]);
+  useEffect(()=>{if(fbReady)return;const h=()=>setFbReady(true);window.addEventListener("fbready",h);return()=>window.removeEventListener("fbready",h);},[fbReady]);
 
-  // Auth listener
   useEffect(()=>{
     if(!fbReady||!window._fbOnAuth)return;
     return window._fbOnAuth(async u=>{
       setUser(u||null);
       if(u){
-        // Load data from Firestore
         setSyncing(true);
-        try{
-          const remote=await window._fbLoad(u.uid);
-          if(remote){setSt(remote);svSt(remote);}
-          else{
-            const local=ldSt();
-            if(local){setSt(local);await window._fbSave(u.uid,local);}
-          }
-        }catch(err){const local=ldSt();if(local)setSt(local);}
+        try{const remote=await window._fbLoad(u.uid);if(remote){setSt(remote);svSt(remote);}else{const local=ldSt();if(local){setSt(local);await window._fbSave(u.uid,local);}}}catch(e){const local=ldSt();if(local)setSt(local);}
         setSyncing(false);
-        // Real-time listener - only update if remote is newer
         if(listenUnsub.current)listenUnsub.current();
         listenUnsub.current=window._fbListen(u.uid,(remote,remoteTs)=>{
-          setSt(prev=>{
-            if(!prev)return remote;
-            const localTs=prev.updatedAt||0;
-            if(remoteTs>localTs)return remote;
-            return prev;
-          });
+          setSt(prev=>{if(!prev)return remote;if((remoteTs||0)>(prev.updatedAt||0))return remote;return prev;});
         });
-      }else{
-        if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}
-        setSt(null);
-      }
+      }else{if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}setSt(null);}
     });
   },[fbReady]);
 
@@ -371,17 +286,11 @@ function App(){
     clearTimeout(saveTimer.current);
     const withTs={...data,updatedAt:Date.now()};
     svSt(withTs);
-    saveTimer.current=setTimeout(()=>{
-      window._fbSave(user.uid,withTs).catch(()=>{});
-    },1000);
+    saveTimer.current=setTimeout(()=>window._fbSave(user.uid,withTs).catch(()=>{}),1000);
   },[user]);
 
   const setStAndSave=useCallback(updater=>{
-    setSt(prev=>{
-      const next=typeof updater==="function"?updater(prev):updater;
-      if(next)saveToCloud(next);
-      return next;
-    });
+    setSt(prev=>{const next=typeof updater==="function"?updater(prev):updater;if(next)saveToCloud(next);return next;});
   },[saveToCloud]);
 
   const notify=useCallback((msg,ok=true)=>{setToast({msg,ok});setTimeout(()=>setToast(null),2500);},[]);
@@ -389,82 +298,35 @@ function App(){
   const undo=()=>{if(!undos.length)return;setRedos(r=>[...r,st]);setStAndSave(undos[undos.length-1]);setUndos(u=>u.slice(0,-1));notify("Undo applied",false);};
   const redo=()=>{if(!redos.length)return;setUndos(u=>[...u,st]);setStAndSave(redos[redos.length-1]);setRedos(r=>r.slice(0,-1));notify("Redo applied",false);};
 
-  // Loading screen
-  if(user===undefined||(!fbReady&&!st)){
-    return d({style:{minHeight:"100vh",background:"#0f0f23",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}},
-      d({style:{fontSize:48}},"🏦"),
-      d({style:{color:"#00d7ff",fontWeight:700,fontSize:14}},syncing?"Syncing...":"Loading...")
-    );
-  }
-
+  if(user===undefined||!fbReady)return d({style:{minHeight:"100vh",background:"#0f0f23",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}},d({style:{fontSize:48}},"🏦"),d({style:{color:"#00d7ff",fontWeight:700,fontSize:14}},"Loading..."));
   if(!user)return e(SignInScreen,{t:T});
-  if(!st)return e(Setup,{t:T,onDone:x=>{setStAndSave(x);}});
+  if(!st)return e(Setup,{t:T,onDone:x=>setStAndSave(x)});
 
-  const recalcBalances=(ledger)=>{
-    let chk=0,sv=st.savings;
-    return ledger.map(tx=>{
-      if(tx.type==="DEPOSIT")   chk+=tx.amount;
-      if(tx.type==="WITHDRAWAL")chk-=tx.amount;
-      if(tx.type==="XFER-OUT") {chk-=tx.amount;sv+=tx.amount;}
-      if(tx.type==="XFER-IN")  {chk+=tx.amount;sv-=tx.amount;}
-      return{...tx,postBalance:chk};
-    });
-  };
+  const recalc=ledger=>{let chk=0,sv=st.savings;return ledger.map(tx=>{if(tx.type==="DEPOSIT")chk+=tx.amount;if(tx.type==="WITHDRAWAL")chk-=tx.amount;if(tx.type==="XFER-OUT"){chk-=tx.amount;sv+=tx.amount;}if(tx.type==="XFER-IN"){chk+=tx.amount;sv-=tx.amount;}return{...tx,postBalance:chk};});};
 
-  const saveTx=updated=>{
-    pushUndo(st);
-    setStAndSave(prev=>{
-      const idx=prev.ledger.findIndex(t=>t.id===updated.id);
-      if(idx<0)return prev;
-      const nl=[...prev.ledger];nl[idx]=updated;
-      const rc=recalcBalances(nl);
-      return{...prev,checking:rc.length?rc[rc.length-1].postBalance:prev.checking,ledger:rc,balanceHistory:rc.map(t=>t.postBalance).slice(-60)};
-    });
-    setEditTx(null);notify("Transaction updated!");
-  };
-
-  const deleteTx=id=>{
-    pushUndo(st);
-    setStAndSave(prev=>{
-      const nl=prev.ledger.filter(t=>t.id!==id);
-      const rc=recalcBalances(nl);
-      return{...prev,checking:rc.length?rc[rc.length-1].postBalance:0,ledger:rc,balanceHistory:rc.map(t=>t.postBalance).slice(-60)};
-    });
-    setEditTx(null);notify("Transaction deleted!");
-  };
+  const saveTx=updated=>{pushUndo(st);setStAndSave(prev=>{const idx=prev.ledger.findIndex(t=>t.id===updated.id);if(idx<0)return prev;const nl=[...prev.ledger];nl[idx]=updated;const rc=recalc(nl);return{...prev,checking:rc.length?rc[rc.length-1].postBalance:prev.checking,ledger:rc,balanceHistory:rc.map(t=>t.postBalance).slice(-60)};});setEditTx(null);notify("Transaction updated!");};
+  const deleteTx=id=>{pushUndo(st);setStAndSave(prev=>{const nl=prev.ledger.filter(t=>t.id!==id);const rc=recalc(nl);return{...prev,checking:rc.length?rc[rc.length-1].postBalance:0,ledger:rc,balanceHistory:rc.map(t=>t.postBalance).slice(-60)};});setEditTx(null);notify("Transaction deleted!");};
 
   const submitTx=()=>{
     const amt=parseFloat(form.amount);
     if(!amt||amt<=0){setFormErr("Enter a valid positive amount.");return;}
-    if((form.type==="WITHDRAWAL"||form.type==="XFER-OUT")&&amt>st.checking+1e-9){setFormErr("Insufficient checking funds.");return;}
-    if(form.type==="XFER-IN"&&amt>st.savings+1e-9){setFormErr("Insufficient savings funds.");return;}
+    if((form.type==="WITHDRAWAL"||form.type==="XFER-OUT")&&amt>st.checking+1e-9){setFormErr("Insufficient funds.");return;}
+    if(form.type==="XFER-IN"&&amt>st.savings+1e-9){setFormErr("Insufficient savings.");return;}
     pushUndo(st);
     setStAndSave(prev=>{
       let chk=prev.checking,sv=prev.savings;
-      if(form.type==="DEPOSIT")   chk+=amt;
-      if(form.type==="WITHDRAWAL")chk-=amt;
-      if(form.type==="XFER-OUT") {chk-=amt;sv+=amt;}
-      if(form.type==="XFER-IN")  {chk+=amt;sv-=amt;}
+      if(form.type==="DEPOSIT")chk+=amt;if(form.type==="WITHDRAWAL")chk-=amt;
+      if(form.type==="XFER-OUT"){chk-=amt;sv+=amt;}if(form.type==="XFER-IN"){chk+=amt;sv-=amt;}
       const tx={id:prev.nextId,when:Date.now(),type:form.type,amount:amt,category:form.category||"UNCAT",note:form.note,postBalance:chk};
       return{...prev,checking:chk,savings:sv,nextId:prev.nextId+1,ledger:[...prev.ledger,tx],balanceHistory:[...prev.balanceHistory,chk].slice(-60)};
     });
-    setForm({type:"DEPOSIT",amount:"",category:"INCOME",note:""});
-    setFormErr("");notify("Transaction recorded!");setScreen("dashboard");
+    setForm({type:"DEPOSIT",amount:"",category:"INCOME",note:""});setFormErr("");notify("Transaction recorded!");setScreen("dashboard");
   };
 
   const exportCSV=()=>{
     const rows=["id,date,type,amount,balance,category,note",...st.ledger.map(tx=>`${tx.id},"${fFull(tx.when)}",${tx.type},${tx.amount.toFixed(2)},${tx.postBalance.toFixed(2)},"${tx.category}","${(tx.note||"").replace(/"/g,'\\"')}"`
     )];
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([rows.join("\n")],{type:"text/csv"}));
-    a.download="ledger.csv";a.click();notify("CSV exported!");
-  };
-
-  const resetApp=()=>{
-    if(!window.confirm("Delete ALL data and start fresh?"))return;
-    localStorage.removeItem(SK);
-    if(user&&window._fbSave)window._fbSave(user.uid,null).catch(()=>{});
-    setSt(null);setUndos([]);setRedos([]);
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows.join("\n")],{type:"text/csv"}));a.download="ledger.csv";a.click();notify("CSV exported!");
   };
 
   const importCSV=ev=>{
@@ -472,211 +334,174 @@ function App(){
     const reader=new FileReader();
     reader.onload=r=>{
       try{
-        const lines=r.target.result.trim().split("\n");
-        const imported=[];
-        for(let i=1;i<lines.length;i++){
-          const row=lines[i].match(/(".*?"|[^,]+)(?=,|$)/g)||[];
-          const cl=v=>(v||"").replace(/^"|"$/g,"").trim();
-          const amt=parseFloat(cl(row[3]))||0;
-          if(amt>0)imported.push({id:parseInt(cl(row[0]))||i,when:new Date(cl(row[1])).getTime()||Date.now(),type:cl(row[2])||"WITHDRAWAL",amount:amt,postBalance:parseFloat(cl(row[4]))||0,category:(cl(row[5])||"UNCAT").toUpperCase(),note:cl(row[6])||""});
-        }
+        const lines=r.target.result.trim().split("\n");const imported=[];
+        for(let i=1;i<lines.length;i++){const row=lines[i].match(/(".*?"|[^,]+)(?=,|$)/g)||[];const cl=v=>(v||"").replace(/^"|"$/g,"").trim();const amt=parseFloat(cl(row[3]))||0;if(amt>0)imported.push({id:parseInt(cl(row[0]))||i,when:new Date(cl(row[1])).getTime()||Date.now(),type:cl(row[2])||"WITHDRAWAL",amount:amt,postBalance:parseFloat(cl(row[4]))||0,category:(cl(row[5])||"UNCAT").toUpperCase(),note:cl(row[6])||""});}
         if(!imported.length){notify("No valid rows found.",false);return;}
-        if(!window.confirm(`Import ${imported.length} transactions? This will REPLACE your current ledger.`)){ev.target.value="";return;}
-        pushUndo(st);
-        setStAndSave(prev=>({...prev,checking:imported[imported.length-1].postBalance,nextId:imported.length+1,ledger:imported,balanceHistory:imported.map(t=>t.postBalance).slice(-60)}));
+        if(!window.confirm(`Import ${imported.length} transactions?`)){ev.target.value="";return;}
+        pushUndo(st);setStAndSave(prev=>({...prev,checking:imported[imported.length-1].postBalance,nextId:imported.length+1,ledger:imported,balanceHistory:imported.map(t=>t.postBalance).slice(-60)}));
         notify(`Imported ${imported.length} transactions!`);setScreen("dashboard");
-      }catch(err){notify("Import failed.",false);}
-      ev.target.value="";
-    };
-    reader.readAsText(file);
+      }catch(e){notify("Import failed.",false);}ev.target.value="";
+    };reader.readAsText(file);
   };
 
-  const totalIn =st.ledger.filter(t=>t.type==="DEPOSIT"||t.type==="XFER-IN").reduce((a,t)=>a+t.amount,0);
+  const resetApp=()=>{if(!window.confirm("Delete ALL data?"))return;localStorage.removeItem(SK);if(user&&window._fbSave)window._fbSave(user.uid,{}).catch(()=>{});setSt(null);setUndos([]);setRedos([]);};
+
+  const totalIn=st.ledger.filter(t=>t.type==="DEPOSIT"||t.type==="XFER-IN").reduce((a,t)=>a+t.amount,0);
   const totalOut=st.ledger.filter(t=>t.type==="WITHDRAWAL"||t.type==="XFER-OUT").reduce((a,t)=>a+t.amount,0);
-  const catSpend={};
-  st.ledger.filter(t=>t.type==="WITHDRAWAL").forEach(t=>{catSpend[t.category]=(catSpend[t.category]||0)+t.amount;});
+  const catSpend={};st.ledger.filter(t=>t.type==="WITHDRAWAL").forEach(t=>{catSpend[t.category]=(catSpend[t.category]||0)+t.amount;});
   const topCats=Object.entries(catSpend).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const filtered=[...st.ledger].reverse().filter(t=>!search||t.category.toLowerCase().includes(search.toLowerCase())||(t.note||"").toLowerCase().includes(search.toLowerCase()));
-  const is={background:T.panel2,color:T.text,border:`1px solid ${T.border}60`,borderRadius:12,padding:"11px 14px",fontSize:14,outline:"none",width:"100%",fontFamily:"inherit",boxSizing:"border-box"};
+  const is={background:T.panel2,color:T.text,border:`1px solid ${T.border}60`,borderRadius:12,padding:"11px 14px",fontSize:14,outline:"none",width:"100%"};
 
-  const Tab=({id,label,icon})=>{
+  const NavBtn=({id,icon,label})=>{
     const act=screen===id;
-    return b({onClick:()=>setScreen(id),style:{flex:1,padding:"9px 4px",border:"none",cursor:"pointer",background:act?`linear-gradient(135deg,${T.h1},${T.h2})`:T.panel2,color:act?"#fff":T.muted,fontWeight:700,fontSize:11,letterSpacing:"0.04em",borderTop:act?`2px solid ${T.accent}`:"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,boxShadow:act?`inset 0 -2px 8px ${T.accent}30`:"none"}},
-      s({style:{fontSize:18}},icon),label
-    );
+    return b({onClick:()=>setScreen(id),style:{flex:1,padding:"9px 4px",border:"none",cursor:"pointer",background:act?`linear-gradient(135deg,${T.h1},${T.h2})`:T.panel2,color:act?"#fff":T.muted,fontWeight:700,fontSize:11,borderTop:act?`2px solid ${T.accent}`:"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3}},s({style:{fontSize:18}},icon),label);
   };
 
-  return d({className:"app-shell",style:{minHeight:"100vh",background:T.panel2,color:T.text,fontFamily:"system-ui,sans-serif",position:"relative"}},
+  const SideBtn=({id,icon,label})=>{
+    const act=screen===id;
+    return b({onClick:()=>setScreen(id),style:{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",borderRadius:12,border:"none",cursor:"pointer",width:"100%",textAlign:"left",background:act?`linear-gradient(135deg,${T.h1},${T.h2})`:"transparent",color:act?"#fff":T.muted,fontWeight:700,fontSize:14,marginBottom:2}},s({style:{fontSize:18}},icon)," ",label);
+  };
+
+  const SCREENS={
+    dashboard:e(Fragment,null,
+      d({style:{display:"flex",gap:10,marginBottom:14}},
+        [["Money In",totalIn,T.good,"⬆"],["Money Out",totalOut,T.bad,"⬇"],["Net",totalIn-totalOut,totalIn-totalOut>=0?T.good:T.bad,"≈"]].map(([lb,val,col,ic])=>
+          d({key:lb,style:{flex:1,borderRadius:14,overflow:"hidden",border:`1px solid ${col}40`}},
+            d({style:{background:`linear-gradient(135deg,${T.h1},${T.h2})`,padding:"5px 10px"}},s({style:{color:"rgba(255,255,255,0.75)",fontSize:9,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}},lb)),
+            d({style:{height:2,background:`linear-gradient(90deg,${col},transparent)`}}),
+            d({style:{background:T.panel,padding:"8px 6px",textAlign:"center"}},d({style:{fontSize:14,fontWeight:900,color:col}},ic+" "+f$(val))),
+            d({style:{height:3,background:`linear-gradient(135deg,${T.h2},${T.h1})`}})
+          )
+        )
+      ),
+      e(GBox,{title:"Recent Transactions",right:`${st.ledger.length} total`,t:T},
+        ...[...st.ledger].reverse().slice(0,10).map((tx,i)=>e(TxRow,{key:tx.id,tx,i,t:T,onTap:()=>setEditTx(tx)})),
+        st.ledger.length===0&&d({style:{padding:32,textAlign:"center",color:T.muted,fontSize:13}},"No transactions yet. Tap ➕ New to add one.")
+      )
+    ),
+    ledger:e(GBox,{title:"Full Ledger",right:"Most recent first",t:T},
+      ...[...st.ledger].reverse().map((tx,i)=>e(TxRow,{key:tx.id,tx,i,t:T,onTap:()=>setEditTx(tx)})),
+      st.ledger.length===0&&d({style:{padding:24,textAlign:"center",color:T.muted,fontSize:13}},"No transactions yet.")
+    ),
+    "new-tx":e(GBox,{title:"New Transaction",t:T},
+      d({style:{padding:"20px 18px"}},
+        formErr&&d({style:{background:T.bad+"22",color:T.bad,border:`1px solid ${T.bad}60`,borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700,marginBottom:16}},"⚠ "+formErr),
+        d({style:{marginBottom:18}},d({style:{color:T.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:10}},"TYPE"),
+          d({style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}},
+            [{val:"DEPOSIT",lbl:"Deposit",ic:"⬆",col:T.good},{val:"WITHDRAWAL",lbl:"Withdrawal",ic:"⬇",col:T.bad},{val:"XFER-OUT",lbl:"To Savings",ic:"→",col:T.warn},{val:"XFER-IN",lbl:"From Savings",ic:"←",col:T.accent}].map(({val,lbl,ic,col})=>{
+              const act=form.type===val;
+              return b({key:val,onClick:()=>setForm(p=>({...p,type:val})),style:{background:act?`linear-gradient(135deg,${T.h1},${T.h2})`:T.panel2,color:act?"#fff":col,border:act?`2px solid ${T.accent}`:`1.5px solid ${col}50`,borderRadius:13,padding:"13px 8px",fontWeight:700,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7}},s({style:{fontSize:18}},ic),lbl);
+            })
+          )
+        ),
+        d({style:{marginBottom:14}},d({style:{color:T.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"AMOUNT"),inp({type:"number",placeholder:"0.00",value:form.amount,min:"0",step:"0.01",onChange:ev=>setForm(p=>({...p,amount:ev.target.value})),style:{...is,fontSize:20,fontWeight:900,color:T.good}})),
+        d({style:{marginBottom:14}},d({style:{color:T.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"CATEGORY"),
+          d({style:{display:"flex",flexWrap:"wrap",gap:7}},CATS.map(c=>{const act=form.category===c,col=cc(c);return b({key:c,onClick:()=>setForm(p=>({...p,category:c})),style:{padding:"6px 12px",borderRadius:20,fontWeight:700,fontSize:11,cursor:"pointer",background:act?col+"30":T.panel2,color:act?col:T.muted,border:act?`1.5px solid ${col}`:`1px solid ${T.border}40`}},c);}))
+        ),
+        d({style:{marginBottom:22}},d({style:{color:T.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"NOTE (optional)"),inp({type:"text",placeholder:"e.g. Grocery run, rent…",value:form.note,onChange:ev=>setForm(p=>({...p,note:ev.target.value})),style:is})),
+        b({onClick:submitTx,style:{width:"100%",padding:"15px 0",borderRadius:14,fontWeight:900,fontSize:16,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${T.h1},${T.h2})`}},"✅ Record Transaction")
+      )
+    ),
+    analytics:e(Fragment,null,
+      e(GBox,{title:"Financial Summary",t:T},
+        d({style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,padding:16}},
+          [["Inflow",totalIn,T.good],["Outflow",totalOut,T.bad],["Net",totalIn-totalOut,totalIn-totalOut>=0?T.good:T.bad]].map(([lb,val,col])=>
+            d({key:lb,style:{textAlign:"center",padding:"12px 8px",borderRadius:12,background:T.panel2,border:`1px solid ${col}30`}},
+              d({style:{color:T.muted,fontSize:10,letterSpacing:"0.1em",marginBottom:6}},lb),d({style:{color:col,fontWeight:900,fontSize:15}},f$(val))
+            )
+          )
+        )
+      ),
+      e(GBox,{title:"Balance History",t:T},d({style:{padding:"14px 18px"}},e(Spark,{data:st.balanceHistory,color:T.good,ht:70}),d({style:{display:"flex",justifyContent:"space-between",fontSize:10,color:T.muted,marginTop:4}},s(null,"Oldest"),s(null,"Latest: "+f$(st.checking))))),
+      e(GBox,{title:"Spending by Category",t:T},
+        d({style:{padding:"14px 18px"}},
+          ...topCats.map(([cat,amt])=>{const pct=totalOut>0?(amt/totalOut)*100:0,col=cc(cat);return d({key:cat,style:{marginBottom:14}},d({style:{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}},s({style:{color:col,fontWeight:700}},cat),s({style:{color:T.bad,fontWeight:700}},f$(amt)+" ",s({style:{color:T.muted,fontWeight:400}},`(${pct.toFixed(1)}%)`))),d({style:{borderRadius:99,height:9,background:T.panel2,overflow:"hidden"}},d({style:{height:"100%",width:pct+"%",borderRadius:99,background:`linear-gradient(90deg,${col},${col}70)`}})));}),
+          topCats.length===0&&d({style:{textAlign:"center",color:T.muted,fontSize:13,padding:16}},"No spending data yet.")
+        )
+      )
+    ),
+    search:e(GBox,{title:"Search Transactions",t:T},
+      d({style:{padding:"14px 16px"}},
+        inp({type:"text",placeholder:"Search by category or note…",value:search,onChange:ev=>setSearch(ev.target.value),style:{...is,marginBottom:12},autoFocus:true}),
+        d({style:{fontSize:11,color:T.muted,marginBottom:10}},`${filtered.length} result(s)`),
+        ...filtered.map((tx,i)=>e(TxRow,{key:tx.id,tx,i,t:T,onTap:()=>setEditTx(tx)})),
+        filtered.length===0&&d({style:{padding:20,textAlign:"center",color:T.muted,fontSize:13}},"No results found.")
+      )
+    ),
+  };
+
+  return d({id:"app",style:{background:T.panel2,color:T.text}},
     toast&&d({style:{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:9999,pointerEvents:"none",background:`linear-gradient(135deg,${T.h1},${T.h2})`,border:`1.5px solid ${toast.ok?T.good:T.warn}`,borderRadius:12,padding:"10px 22px",color:"#fff",fontWeight:700,fontSize:13,boxShadow:"0 8px 32px #00000080",whiteSpace:"nowrap"}},(toast.ok?"✅ ":"↩ ")+toast.msg),
     inp({type:"file",id:"csvImport",accept:".csv",onChange:importCSV,style:{display:"none"}}),
     editTx&&e(EditModal,{tx:editTx,t:T,onSave:saveTx,onDelete:deleteTx,onClose:()=>setEditTx(null)}),
 
     // HEADER
-    d({className:"app-header",style:{background:`linear-gradient(135deg,${T.h1} 0%,${T.h2} 60%,${T.h1} 100%)`,padding:"16px 18px 14px",boxShadow:"0 4px 24px #00000060",position:"sticky",top:0,zIndex:100}},
+    d({id:"header",style:{background:`linear-gradient(135deg,${T.h1} 0%,${T.h2} 60%,${T.h1} 100%)`,padding:"14px 18px 12px",boxShadow:"0 4px 24px #00000060",position:"sticky",top:0,zIndex:100}},
       d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}},
         d({style:{display:"flex",alignItems:"center",gap:12}},
-          d({style:{width:44,height:44,borderRadius:12,background:"rgba(0,0,0,0.3)",border:`2px solid ${T.accent}60`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}},"🏦"),
+          d({style:{width:42,height:42,borderRadius:12,background:"rgba(0,0,0,0.3)",border:`2px solid ${T.accent}60`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}},"🏦"),
           d(null,
-            d({style:{color:"#fff",fontWeight:900,fontSize:17,letterSpacing:"0.03em"}},"CHECKING ACCOUNT"),
-            d({style:{color:"rgba(255,255,255,0.65)",fontSize:11}},
-              editOwner
-                ? s({style:{display:"flex",gap:6,alignItems:"center"}},
-                    inp({value:ownerDraft,onChange:ev=>setOwnerDraft(ev.target.value),style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}`,borderRadius:6,color:"#fff",padding:"2px 6px",fontSize:11,outline:"none",width:120},autoFocus:true,onKeyDown:ev=>{if(ev.key==="Enter"){setStAndSave(p=>({...p,owner:ownerDraft}));setEditOwner(false);}}}),
-                    b({onClick:()=>{setStAndSave(p=>({...p,owner:ownerDraft}));setEditOwner(false);},style:{background:T.good,border:"none",borderRadius:5,padding:"2px 8px",fontWeight:700,fontSize:11,cursor:"pointer"}},"✓"),
-                    b({onClick:()=>setEditOwner(false),style:{background:"transparent",border:"none",color:"rgba(255,255,255,0.5)",fontSize:16,cursor:"pointer"}},"✕")
-                  )
-                : s({onClick:()=>{setOwnerDraft(st.owner);setEditOwner(true);},style:{cursor:"pointer"}},`${st.owner} · ****${st.accountNum} ✏️`)
-            )
+            d({style:{color:"#fff",fontWeight:900,fontSize:16,letterSpacing:"0.03em"}},"CHECKING ACCOUNT"),
+            editOwner
+              ? d({style:{display:"flex",gap:6,alignItems:"center",marginTop:2}},
+                  inp({value:ownerDraft,onChange:ev=>setOwnerDraft(ev.target.value),style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}`,borderRadius:6,color:"#fff",padding:"2px 6px",fontSize:11,outline:"none",width:120},autoFocus:true,onKeyDown:ev=>{if(ev.key==="Enter"){setStAndSave(p=>({...p,owner:ownerDraft}));setEditOwner(false);}}}),
+                  b({onClick:()=>{setStAndSave(p=>({...p,owner:ownerDraft}));setEditOwner(false);},style:{background:T.good,border:"none",borderRadius:5,padding:"2px 8px",fontWeight:700,fontSize:11,cursor:"pointer"}},"✓"),
+                  b({onClick:()=>setEditOwner(false),style:{background:"transparent",border:"none",color:"rgba(255,255,255,0.5)",fontSize:16,cursor:"pointer"}},"✕")
+                )
+              : d({style:{color:"rgba(255,255,255,0.65)",fontSize:11,marginTop:2,cursor:"pointer"},onClick:()=>{setOwnerDraft(st.owner);setEditOwner(true);}},`${st.owner} · ****${st.accountNum} ✏️`)
           )
         ),
         d({style:{display:"flex",gap:6,alignItems:"center"}},
-          syncing&&s({style:{color:"rgba(255,255,255,0.6)",fontSize:10}},"☁ syncing…"),
+          syncing&&s({style:{color:"rgba(255,255,255,0.5)",fontSize:10,marginRight:4}},"☁"),
           b({onClick:()=>setShowTheme(p=>!p),style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}60`,color:"#fff",borderRadius:10,padding:"6px 12px",fontWeight:700,fontSize:11,cursor:"pointer"}},"🎨"),
-          b({onClick:()=>window._fbSignOut&&window._fbSignOut(),style:{background:"rgba(0,0,0,0.3)",border:`1px solid rgba(255,255,255,0.2)`,color:"rgba(255,255,255,0.7)",borderRadius:10,padding:"6px 10px",fontWeight:700,fontSize:10,cursor:"pointer"}},"Sign out")
+          b({onClick:()=>window._fbSignOut&&window._fbSignOut(),style:{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.7)",borderRadius:10,padding:"6px 10px",fontWeight:700,fontSize:10,cursor:"pointer"}},"Sign out")
         )
       ),
       d({style:{display:"flex",gap:8}},
         [["↩",undo,!undos.length,"Undo"],["↪",redo,!redos.length,"Redo"],["📥",exportCSV,false,"Export"],["📤",()=>document.getElementById("csvImport").click(),false,"Import"],["🗑",resetApp,false,"Reset"]].map(([ic,fn,dis,lb])=>
-          b({key:lb,onClick:fn,disabled:dis,style:{flex:1,background:"rgba(0,0,0,0.28)",border:`1px solid rgba(255,255,255,${dis?0.1:0.3})`,color:dis?"rgba(255,255,255,0.25)":"#fff",borderRadius:9,padding:"6px 2px",fontWeight:700,fontSize:10,cursor:dis?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:3}},
-            s({style:{fontSize:13}},ic),lb
-          )
+          b({key:lb,onClick:fn,disabled:dis,style:{flex:1,background:"rgba(0,0,0,0.28)",border:`1px solid rgba(255,255,255,${dis?0.1:0.3})`,color:dis?"rgba(255,255,255,0.25)":"#fff",borderRadius:9,padding:"6px 2px",fontWeight:700,fontSize:10,cursor:dis?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:3}},s({style:{fontSize:13}},ic),lb)
         )
       )
     ),
 
-    showTheme&&d({style:{margin:"10px 14px",background:T.panel,borderRadius:16,padding:16,border:`1px solid ${T.border}60`,boxShadow:"0 8px 32px #00000060"}},
-      d({style:{color:T.accent,fontWeight:900,fontSize:11,letterSpacing:"0.14em",marginBottom:10}},"SELECT THEME"),
-      d({style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}},
-        THEMES.map((th,i)=>b({key:i,onClick:()=>{setTid(i);setShowTheme(false);},style:{background:`linear-gradient(135deg,${th.h1},${th.h2})`,border:i===tid?"2.5px solid #fff":"1.5px solid transparent",borderRadius:10,padding:"8px 10px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",textAlign:"left",boxShadow:i===tid?`0 0 14px ${th.accent}`:"none"}},th.name))
+    // SIDE NAV (desktop)
+    d({id:"sidenav",style:{background:T.panel}},
+      d({style:{color:T.accent,fontWeight:900,fontSize:10,letterSpacing:"0.14em",padding:"4px 8px 10px"}},"NAVIGATION"),
+      e(SideBtn,{id:"dashboard",icon:"🏠",label:"Home"}),
+      e(SideBtn,{id:"ledger",icon:"📋",label:"Ledger"}),
+      e(SideBtn,{id:"new-tx",icon:"➕",label:"New Transaction"}),
+      e(SideBtn,{id:"analytics",icon:"📊",label:"Analytics"}),
+      e(SideBtn,{id:"search",icon:"🔍",label:"Search"}),
+      d({style:{flex:1}}),
+      d({style:{borderTop:`1px solid ${T.border}30`,paddingTop:12,marginTop:12}},
+        d({style:{color:T.muted,fontSize:10,padding:"0 8px 4px"}},"Signed in as"),
+        d({style:{color:T.text,fontSize:12,fontWeight:700,padding:"0 8px 12px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},(user&&user.email)||""),
       )
     ),
 
-    d({className:"bal-cards",style:{display:"flex",gap:10,padding:"14px 14px 4px"}},
-      e(BalCard,{label:"Checking",value:st.checking,icon:"💳",color:T.good,t:T,spark:st.balanceHistory}),
-      e(BalCard,{label:"Savings", value:st.savings, icon:"🏦",color:T.accent,t:T})
+    // MAIN (balance cards + content)
+    d({id:"main"},
+      showTheme&&d({style:{margin:"10px 14px 0",background:T.panel,borderRadius:16,padding:16,border:`1px solid ${T.border}60`}},
+        d({style:{color:T.accent,fontWeight:900,fontSize:11,letterSpacing:"0.14em",marginBottom:10}},"SELECT THEME"),
+        d({style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}},
+          THEMES.map((th,i)=>b({key:i,onClick:()=>{setTid(i);setShowTheme(false);},style:{background:`linear-gradient(135deg,${th.h1},${th.h2})`,border:i===tid?"2.5px solid #fff":"1.5px solid transparent",borderRadius:10,padding:"8px 10px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",textAlign:"left"}},th.name))
+        )
+      ),
+      d({id:"balcards",style:{display:"flex",gap:10,padding:"14px 14px 4px"}},
+        e(BalCard,{label:"Checking",value:st.checking,icon:"💳",color:T.good,t:T,spark:st.balanceHistory}),
+        e(BalCard,{label:"Savings",value:st.savings,icon:"🏦",color:T.accent,t:T})
+      ),
+      d({id:"content"},SCREENS[screen]||SCREENS.dashboard)
     ),
 
-    // SIDE NAV (desktop only)
-    d({className:"app-sidenav",style:{background:T.panel}},
-      d({style:{color:T.accent,fontWeight:900,fontSize:10,letterSpacing:"0.14em",marginBottom:8,padding:"0 8px"}},"NAVIGATION"),
-      ...[["dashboard","\u{1F3E0}","Home"],["ledger","\u{1F4CB}","Ledger"],["new-tx","\u2795","New Transaction"],["analytics","\u{1F4CA}","Analytics"],["search","\u{1F50D}","Search"]].map(([id,icon,label])=>{
-        const act=screen===id;
-        return b({key:id,onClick:()=>setScreen(id),style:{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,border:"none",cursor:"pointer",width:"100%",textAlign:"left",background:act?"linear-gradient(135deg,"+T.h1+","+T.h2+")":`transparent`,color:act?"#fff":T.muted,fontWeight:700,fontSize:14,marginBottom:2}},
-          s({style:{fontSize:20}},icon),label
-        );
-      }),
-      d({style:{marginTop:24,paddingTop:16,borderTop:"1px solid "+T.border+"30",display:"flex",flexDirection:"column",gap:4}}),
-      d({style:{color:T.muted,fontSize:11,padding:"0 8px"}},"Signed in as"),
-      d({style:{color:T.text,fontSize:12,fontWeight:700,padding:"4px 8px 10px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},(user&&user.email)||""),
-      b({onClick:()=>window._fbSignOut&&window._fbSignOut(),style:{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,border:"1px solid "+T.border+"40",cursor:"pointer",width:"100%",background:"transparent",color:T.muted,fontWeight:700,fontSize:13}},
-        "\u{1F6AA} Sign Out"
-      )
-    ),
-    
-    d({className:"app-content",style:{padding:"10px 14px 90px",minHeight:"60vh"}},
-      screen==="dashboard"&&e(Fragment,null,
-        d({style:{display:"flex",gap:10,marginBottom:14}},
-          [["Money In",totalIn,T.good,"⬆"],["Money Out",totalOut,T.bad,"⬇"],["Net",totalIn-totalOut,totalIn-totalOut>=0?T.good:T.bad,"≈"]].map(([lb,val,col,ic])=>
-            d({key:lb,style:{flex:1,borderRadius:14,overflow:"hidden",border:`1px solid ${col}40`,boxShadow:"0 2px 12px #00000050"}},
-              d({style:{background:`linear-gradient(135deg,${T.h1},${T.h2})`,padding:"5px 10px"}},s({style:{color:"rgba(255,255,255,0.75)",fontSize:9,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}},lb)),
-              d({style:{height:2,background:`linear-gradient(90deg,${col},transparent)`}}),
-              d({style:{background:T.panel,padding:"8px 6px",textAlign:"center"}},d({style:{fontSize:14,fontWeight:900,color:col}},ic+" "+f$(val))),
-              d({style:{height:3,background:`linear-gradient(135deg,${T.h2},${T.h1})`}})
-            )
-          )
-        ),
-        e(GBox,{title:"Recent Transactions",right:`${st.ledger.length} total`,t:T},
-          ...[...st.ledger].reverse().slice(0,10).map((tx,i)=>e(TxRow,{key:tx.id,tx,i,t:T,onTap:()=>setEditTx(tx)})),
-          st.ledger.length===0&&d({style:{padding:32,textAlign:"center",color:T.muted,fontSize:13,lineHeight:1.7}},"No transactions yet. Tap ➕ New to add one.")
-        )
-      ),
-      screen==="ledger"&&e(GBox,{title:"Full Ledger",right:"Most recent first",t:T},
-        ...[...st.ledger].reverse().map((tx,i)=>e(TxRow,{key:tx.id,tx,i,t:T,onTap:()=>setEditTx(tx)})),
-        st.ledger.length===0&&d({style:{padding:24,textAlign:"center",color:T.muted,fontSize:13}},"No transactions yet.")
-      ),
-      screen==="new-tx"&&e(GBox,{title:"New Transaction",t:T},
-        d({style:{padding:"20px 18px"}},
-          formErr&&d({style:{background:T.bad+"22",color:T.bad,border:`1px solid ${T.bad}60`,borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700,marginBottom:16}},"⚠ "+formErr),
-          d({style:{marginBottom:18}},
-            d({style:{color:T.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:10}},"TYPE"),
-            d({style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}},
-              [{val:"DEPOSIT",lbl:"Deposit",ic:"⬆",col:T.good},{val:"WITHDRAWAL",lbl:"Withdrawal",ic:"⬇",col:T.bad},{val:"XFER-OUT",lbl:"To Savings",ic:"→",col:T.warn},{val:"XFER-IN",lbl:"From Savings",ic:"←",col:T.accent}].map(({val,lbl,ic,col})=>{
-                const act=form.type===val;
-                return b({key:val,onClick:()=>setForm(p=>({...p,type:val})),style:{background:act?`linear-gradient(135deg,${T.h1},${T.h2})`:T.panel2,color:act?"#fff":col,border:act?`2px solid ${T.accent}`:`1.5px solid ${col}50`,borderRadius:13,padding:"13px 8px",fontWeight:700,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7,boxShadow:act?`0 0 16px ${T.accent}50`:"none"}},s({style:{fontSize:18}},ic),lbl);
-              })
-            )
-          ),
-          d({style:{marginBottom:14}},
-            d({style:{color:T.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"AMOUNT"),
-            inp({type:"number",placeholder:"0.00",value:form.amount,min:"0",step:"0.01",onChange:ev=>setForm(p=>({...p,amount:ev.target.value})),style:{...is,fontSize:20,fontWeight:900,color:T.good}})
-          ),
-          d({style:{marginBottom:14}},
-            d({style:{color:T.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},"CATEGORY"),
-            d({style:{display:"flex",flexWrap:"wrap",gap:7}},
-              CATS.map(c=>{
-                const act=form.category===c,col=cc(c);
-                return b({key:c,onClick:()=>setForm(p=>({...p,category:c})),style:{padding:"6px 12px",borderRadius:20,fontWeight:700,fontSize:11,cursor:"pointer",background:act?col+"30":T.panel2,color:act?col:T.muted,border:act?`1.5px solid ${col}`:`1px solid ${T.border}40`}},c);
-              })
-            )
-          ),
-          d({style:{marginBottom:22}},
-            d({style:{color:T.accent,fontWeight:800,fontSize:11,letterSpacing:"0.12em",marginBottom:8}},e(Fragment,null,"NOTE ",s({style:{color:T.muted,fontWeight:400}},"(optional)"))),
-            inp({type:"text",placeholder:"e.g. Grocery run, rent…",value:form.note,onChange:ev=>setForm(p=>({...p,note:ev.target.value})),style:is})
-          ),
-          b({onClick:submitTx,style:{width:"100%",padding:"15px 0",borderRadius:14,fontWeight:900,fontSize:16,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${T.h1},${T.h2})`,boxShadow:`0 4px 20px ${T.accent}50`}},"✅ Record Transaction")
-        )
-      ),
-      screen==="analytics"&&e(Fragment,null,
-        e(GBox,{title:"Financial Summary",t:T},
-          d({style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,padding:16}},
-            [["Inflow",totalIn,T.good],["Outflow",totalOut,T.bad],["Net",totalIn-totalOut,totalIn-totalOut>=0?T.good:T.bad]].map(([lb,val,col])=>
-              d({key:lb,style:{textAlign:"center",padding:"12px 8px",borderRadius:12,background:T.panel2,border:`1px solid ${col}30`}},
-                d({style:{color:T.muted,fontSize:10,letterSpacing:"0.1em",marginBottom:6}},lb),
-                d({style:{color:col,fontWeight:900,fontSize:15}},f$(val))
-              )
-            )
-          )
-        ),
-        e(GBox,{title:"Balance History",t:T},
-          d({style:{padding:"14px 18px"}},
-            e(Spark,{data:st.balanceHistory,color:T.good,ht:70}),
-            d({style:{display:"flex",justifyContent:"space-between",fontSize:10,color:T.muted,marginTop:4}},s(null,"Oldest"),s(null,"Latest: "+f$(st.checking)))
-          )
-        ),
-        e(GBox,{title:"Spending by Category",t:T},
-          d({style:{padding:"14px 18px"}},
-            ...topCats.map(([cat,amt])=>{
-              const pct=totalOut>0?(amt/totalOut)*100:0,col=cc(cat);
-              return d({key:cat,style:{marginBottom:14}},
-                d({style:{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}},
-                  s({style:{color:col,fontWeight:700}},cat),
-                  s({style:{color:T.bad,fontWeight:700}},f$(amt)+" ",s({style:{color:T.muted,fontWeight:400}},`(${pct.toFixed(1)}%)`))
-                ),
-                d({style:{borderRadius:99,height:9,background:T.panel2,overflow:"hidden"}},
-                  d({style:{height:"100%",width:pct+"%",borderRadius:99,background:`linear-gradient(90deg,${col},${col}70)`,boxShadow:`0 0 8px ${col}60`}})
-                )
-              );
-            }),
-            topCats.length===0&&d({style:{textAlign:"center",color:T.muted,fontSize:13,padding:16}},"No spending data yet.")
-          )
-        )
-      ),
-      screen==="search"&&e(GBox,{title:"Search Transactions",t:T},
-        d({style:{padding:"14px 16px"}},
-          inp({type:"text",placeholder:"Search by category or note…",value:search,onChange:ev=>setSearch(ev.target.value),style:{...is,marginBottom:12},autoFocus:true}),
-          d({style:{fontSize:11,color:T.muted,marginBottom:10}},`${filtered.length} result(s)`),
-          ...filtered.map((tx,i)=>e(TxRow,{key:tx.id,tx,i,t:T,onTap:()=>setEditTx(tx)})),
-          filtered.length===0&&d({style:{padding:20,textAlign:"center",color:T.muted,fontSize:13}},"No results found.")
-        )
-      )
-    ),
-
-    d({className:"app-bottomnav",style:{position:"fixed",bottom:0,left:0,right:0,width:"100%",background:T.panel,borderTop:`2px solid ${T.border}40`,display:"flex",boxShadow:"0 -4px 20px #00000080",zIndex:200,paddingBottom:"env(safe-area-inset-bottom,0px)"}},
-      e(Tab,{id:"dashboard",label:"Home",      icon:"🏠"}),
-      e(Tab,{id:"ledger",   label:"Ledger",    icon:"📋"}),
-      e(Tab,{id:"new-tx",   label:"New",       icon:"➕"}),
-      e(Tab,{id:"analytics",label:"Analytics", icon:"📊"}),
-      e(Tab,{id:"search",   label:"Search",    icon:"🔍"})
+    // BOTTOM NAV (mobile)
+    d({id:"bottomnav",style:{background:T.panel,borderTop:`2px solid ${T.border}40`,boxShadow:"0 -4px 20px #00000080",paddingBottom:"env(safe-area-inset-bottom,0px)"}},
+      e(NavBtn,{id:"dashboard",icon:"🏠",label:"Home"}),
+      e(NavBtn,{id:"ledger",icon:"📋",label:"Ledger"}),
+      e(NavBtn,{id:"new-tx",icon:"➕",label:"New"}),
+      e(NavBtn,{id:"analytics",icon:"📊",label:"Analytics"}),
+      e(NavBtn,{id:"search",icon:"🔍",label:"Search"})
     )
   );
 }
@@ -685,9 +510,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(e(App,null));
 })();
 </script>
 <script>
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
-}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));}
 </script>
 </body>
 </html>
