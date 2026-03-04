@@ -323,7 +323,7 @@ function Setup({onDone,t}){
 
 function App(){
   const vw=useWindowWidth();
-  const isDesktop=vw>=900;
+  const isDesktop=vw>=900&&!('ontouchstart' in window)&&navigator.maxTouchPoints===0;
   const [user,setUser]=useState(undefined);
   const [st,setSt]=useState(null);
   const [syncing,setSyncing]=useState(false);
