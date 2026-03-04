@@ -23,7 +23,7 @@ const provider=new GoogleAuthProvider();
 window._fbSignIn=()=>signInWithPopup(auth,provider).catch(()=>signInWithRedirect(auth,provider));
 window._fbSignOut=()=>signOut(auth);
 window._fbOnAuth=cb=>onAuthStateChanged(auth,cb);
-window._fbSave=async(uid,data)=>{if(!data)return;await setDoc(doc(db,"users",uid),{state:JSON.stringify(data),updatedAt:Date.now()});};
+window._fbSave=async(uid,data)=>{if(!data||!uid)return;try{await setDoc(doc(db,"users",uid),{state:JSON.stringify(data),updatedAt:Date.now()});}catch(e){console.error("Firestore save error:",e.code,e.message);}};
 window._fbLoad=async uid=>{try{const s=await getDoc(doc(db,"users",uid));if(s.exists()&&s.data().state){const p=JSON.parse(s.data().state);if(p&&p.owner)return p;}}catch(e){}return null;};
 window._fbListen=(uid,cb)=>onSnapshot(doc(db,"users",uid),s=>{if(s.exists()&&s.data().state){try{const p=JSON.parse(s.data().state);if(p&&p.owner)cb(p,s.data().updatedAt||0);}catch(e){}}});
 getRedirectResult(auth).catch(()=>{});
@@ -292,29 +292,48 @@ function App(){
       setUser(u||null);
       if(u){
         setSyncing(true);
-        try{const remote=await window._fbLoad(u.uid);if(remote){setSt(remote);svSt(remote);}else{const local=ldSt();if(local){setSt(local);await window._fbSave(u.uid,local);}}}catch(e){const local=ldSt();if(local)setSt(local);}
+        try{
+          const remote=await window._fbLoad(u.uid);
+          if(remote){
+            setSt(remote);svSt(remote);
+          } else {
+            const local=ldSt();
+            if(local){setSt(local);window._fbSave(u.uid,local);}
+          }
+        }catch(e){const local=ldSt();if(local)setSt(local);}
         setSyncing(false);
-        if(listenUnsub.current)listenUnsub.current();
-        listenUnsub.current=window._fbListen(u.uid,(remote,remoteTs)=>{
-          setSt(prev=>{if(!prev)return remote;if((remoteTs||0)>(prev.updatedAt||0))return remote;return prev;});
-        });
-      }else{if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}setSt(null);}
+        // NO real-time listener - causes overwrite bugs. Load once on sign-in is enough.
+      }else{
+        if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}
+        setSt(null);
+      }
     });
   },[fbReady]);
 
   useEffect(()=>()=>{if(listenUnsub.current)listenUnsub.current();},[]);
   useEffect(()=>{svTid(tid);},[tid]);
 
+  // Use a ref so saveToCloud always has fresh uid without stale closure issues
+  const userRef=useRef(user);
+  useEffect(()=>{userRef.current=user;},[user]);
+
   const saveToCloud=useCallback((data)=>{
-    if(!user||!window._fbSave||!data)return;
-    clearTimeout(saveTimer.current);
+    const uid=userRef.current&&userRef.current.uid;
+    if(!uid||!window._fbSave||!data)return;
     const withTs={...data,updatedAt:Date.now()};
-    svSt(withTs);
-    saveTimer.current=setTimeout(()=>window._fbSave(user.uid,withTs).catch(()=>{}),1000);
-  },[user]);
+    svSt(withTs); // always save locally immediately
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>{
+      window._fbSave(uid,withTs).then(()=>console.log("Saved to cloud")).catch(e=>console.error("Save failed:",e));
+    },800);
+  },[]);
 
   const setStAndSave=useCallback(updater=>{
-    setSt(prev=>{const next=typeof updater==="function"?updater(prev):updater;if(next)saveToCloud(next);return next;});
+    setSt(prev=>{
+      const next=typeof updater==="function"?updater(prev):updater;
+      if(next)saveToCloud(next);
+      return next;
+    });
   },[saveToCloud]);
 
   const notify=useCallback((msg,ok=true)=>{setToast({msg,ok});setTimeout(()=>setToast(null),2500);},[]);
