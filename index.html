@@ -128,6 +128,17 @@ html,body{width:100%;height:100%;}
 <script>
 (function(){
 const {useState,useCallback,useEffect,useRef,createElement:e,Fragment}=React;
+
+// Reactive window width — updates on every resize, drives all layout decisions
+function useWindowWidth(){
+  const [w,setW]=useState(window.innerWidth);
+  useEffect(()=>{
+    const fn=()=>setW(window.innerWidth);
+    window.addEventListener("resize",fn);
+    return()=>window.removeEventListener("resize",fn);
+  },[]);
+  return w;
+}
 const d=(p,...c)=>e("div",p,...c);
 const s=(p,...c)=>e("span",p,...c);
 const b=(p,...c)=>e("button",p,...c);
@@ -308,6 +319,8 @@ function Setup({onDone,t}){
 }
 
 function App(){
+  const vw=useWindowWidth();
+  const isDesktop=vw>=600;
   const [user,setUser]=useState(undefined);
   const [st,setSt]=useState(null);
   const [syncing,setSyncing]=useState(false);
@@ -474,53 +487,69 @@ function App(){
       )
     ),
     ledger:e(Fragment,null,
-      // Ledger header bar
       d({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,gap:12}},
         d({style:{color:T.accent,fontWeight:900,fontSize:13,letterSpacing:"0.12em"}},"📋 FULL LEDGER"),
         d({style:{color:T.muted,fontSize:11,fontFamily:"monospace"}},[...st.ledger].length+" transactions")
       ),
-      // Table header
-      st.ledger.length>0&&d({style:{display:"grid",gridTemplateColumns:"36px 1fr 80px 90px 90px 28px",gap:"0 10px",padding:"7px 14px",background:T.h1+"40",borderRadius:"10px 10px 0 0",border:`1px solid ${T.border}30`,borderBottom:"none",marginBottom:0}},
-        d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em"}},"#"),
-        d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em"}},"DESCRIPTION"),
-        d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em",textAlign:"right"}},"AMOUNT"),
-        d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em",textAlign:"right"}},"BALANCE"),
-        d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em"}},"DATE"),
-        d(null)
-      ),
-      // Table rows
-      d({style:{border:`1px solid ${T.border}30`,borderRadius:st.ledger.length>0?"0 0 12px 12px":"12px",overflow:"hidden"}},
-        st.ledger.length===0
-          ? d({style:{padding:40,textAlign:"center",color:T.muted,fontSize:13,background:T.panel}},"No transactions yet.")
-          : [...st.ledger].reverse().map((tx,i)=>{
-              const isIn=tx.type==="DEPOSIT"||tx.type==="XFER-IN";
-              const col=cc(tx.category);
-              return d({key:tx.id,onClick:()=>setEditTx(tx),style:{
-                display:"grid",gridTemplateColumns:"36px 1fr 80px 90px 90px 28px",
-                gap:"0 10px",padding:"10px 14px",cursor:"pointer",
-                background:i%2===0?T.panel:T.panel2,
-                borderBottom:`1px solid ${T.border}15`,
-                alignItems:"center",
-              },onMouseEnter:ev=>ev.currentTarget.style.background=T.accent+"12",
-               onMouseLeave:ev=>ev.currentTarget.style.background=i%2===0?T.panel:T.panel2},
-                // ID badge
-                d({style:{width:28,height:28,borderRadius:7,background:col+"20",border:`1px solid ${col}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:col,fontFamily:"monospace"}},tx.id),
-                // Description + category
-                d({style:{minWidth:0}},
-                  d({style:{fontSize:13,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:2}},tx.note||tx.category),
-                  d({style:{display:"inline-block",fontSize:9,fontWeight:700,color:col,background:col+"18",border:`1px solid ${col}30`,borderRadius:20,padding:"1px 7px",letterSpacing:"0.06em"}},tx.category)
-                ),
-                // Amount
-                d({style:{textAlign:"right",fontWeight:900,fontSize:13,color:isIn?T.good:T.bad,fontFamily:"monospace"}},(isIn?"+":"-")+f$(tx.amount)),
-                // Balance
-                d({style:{textAlign:"right",fontSize:12,color:T.muted,fontFamily:"monospace"}},f$(tx.postBalance)),
-                // Date
-                d({style:{fontSize:10,color:T.muted}},fShort(tx.when)),
-                // Edit icon
-                d({style:{fontSize:12,opacity:0.3,textAlign:"center"}},"✏️")
-              );
-            })
-      )
+      st.ledger.length===0
+        ? d({style:{padding:40,textAlign:"center",color:T.muted,fontSize:13,background:T.panel,borderRadius:12,border:`1px solid ${T.border}30`}},"No transactions yet.")
+        : e(Fragment,null,
+            // DESKTOP: table header (hidden on mobile via inline check)
+            isDesktop&&d({style:{display:"grid",gridTemplateColumns:"36px 1fr 90px 100px 80px 24px",gap:"0 10px",padding:"7px 16px",background:T.h1+"50",borderRadius:"10px 10px 0 0",border:`1px solid ${T.border}30`,borderBottom:"none"}},
+              d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em"}},"#"),
+              d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em"}},"DESCRIPTION"),
+              d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em",textAlign:"right"}},"AMOUNT"),
+              d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em",textAlign:"right"}},"BALANCE"),
+              d({style:{color:T.accent,fontSize:9,fontWeight:800,letterSpacing:"0.14em"}},"DATE"),
+              d(null)
+            ),
+            d({style:{border:`1px solid ${T.border}30`,borderRadius:isDesktop?"0 0 12px 12px":"12px",overflow:"hidden"}},
+              [...st.ledger].reverse().map((tx,i)=>{
+                const isIn=tx.type==="DEPOSIT"||tx.type==="XFER-IN";
+                const col=cc(tx.category);
+                // isDesktop from hook
+                if(isDesktop){
+                  // TABLE ROW for desktop
+                  return d({key:tx.id,onClick:()=>setEditTx(tx),style:{
+                    display:"grid",gridTemplateColumns:"36px 1fr 90px 100px 80px 24px",
+                    gap:"0 10px",padding:"10px 16px",cursor:"pointer",
+                    background:i%2===0?T.panel:T.panel2,
+                    borderBottom:`1px solid ${T.border}15`,alignItems:"center",
+                  },onMouseEnter:ev=>ev.currentTarget.style.background=T.accent+"15",
+                   onMouseLeave:ev=>ev.currentTarget.style.background=i%2===0?T.panel:T.panel2},
+                    d({style:{width:28,height:28,borderRadius:7,background:col+"20",border:`1px solid ${col}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:col,fontFamily:"monospace"}},tx.id),
+                    d({style:{minWidth:0}},
+                      d({style:{fontSize:13,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:2}},tx.note||tx.category),
+                      d({style:{display:"inline-block",fontSize:9,fontWeight:700,color:col,background:col+"18",border:`1px solid ${col}30`,borderRadius:20,padding:"1px 7px",letterSpacing:"0.06em"}},tx.category)
+                    ),
+                    d({style:{textAlign:"right",fontWeight:900,fontSize:13,color:isIn?T.good:T.bad,fontFamily:"monospace"}},(isIn?"+":"-")+f$(tx.amount)),
+                    d({style:{textAlign:"right",fontSize:12,color:T.muted,fontFamily:"monospace"}},f$(tx.postBalance)),
+                    d({style:{fontSize:10,color:T.muted}},fShort(tx.when)),
+                    d({style:{fontSize:11,opacity:0.3,textAlign:"center"}},"✏️")
+                  );
+                } else {
+                  // CARD ROW for mobile — same as TxRow style
+                  return d({key:tx.id,onClick:()=>setEditTx(tx),style:{
+                    display:"flex",alignItems:"center",gap:10,
+                    padding:"11px 14px",cursor:"pointer",
+                    background:i%2===0?T.panel:T.panel2,
+                    borderBottom:`1px solid ${T.border}15`,
+                  }},
+                    d({style:{width:34,height:34,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,background:col+"22",border:`1px solid ${col}50`}},isIn?"⬆":"⬇"),
+                    d({style:{flex:1,minWidth:0}},
+                      d({style:{fontWeight:700,fontSize:13,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},tx.note||tx.category),
+                      d({style:{fontSize:11,color:T.muted,marginTop:2}},fShort(tx.when)+" · ",s({style:{color:col}},tx.category))
+                    ),
+                    d({style:{textAlign:"right",flexShrink:0}},
+                      d({style:{fontWeight:900,fontSize:14,color:isIn?T.good:T.bad}},(isIn?"+":"-")+f$(tx.amount)),
+                      d({style:{fontSize:10,color:T.muted}},"Bal "+f$(tx.postBalance))
+                    ),
+                    s({style:{fontSize:13,color:T.muted,marginLeft:4}},"✏️")
+                  );
+                }
+              })
+            )
+          )
     ),
     "new-tx":e(GBox,{title:"New Transaction",t:T},
       d({style:{padding:"20px 18px"}},
@@ -683,4 +712,3 @@ if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.se
 </script>
 </body>
 </html>
-
