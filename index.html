@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- build:1772625000 -->
+<!DOCTYPE html><!-- build:1772621558 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -17,7 +17,7 @@
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,signInWithPopup,signInWithRedirect,getRedirectResult,GoogleAuthProvider,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,doc,setDoc,onSnapshot,getDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getFirestore,doc,setDoc,onSnapshot,getDoc,collection,getDocs,deleteDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const firebaseConfig={apiKey:"AIzaSyCf8YVpGcKsv5jVS_Sil-huIALbGPbuP7c",authDomain:"checkingapp-9f160.firebaseapp.com",projectId:"checkingapp-9f160",storageBucket:"checkingapp-9f160.firebasestorage.app",messagingSenderId:"960468279049",appId:"1:960468279049:web:05ec7ab471e2d1805fbdd8"};
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
@@ -26,20 +26,46 @@ const provider=new GoogleAuthProvider();
 window._fbSignIn=()=>signInWithPopup(auth,provider).catch(()=>signInWithRedirect(auth,provider));
 window._fbSignOut=()=>signOut(auth);
 window._fbOnAuth=cb=>onAuthStateChanged(auth,cb);
-window._fbSave=async(uid,data)=>{
-  if(!data||!uid||!data.owner)return;
+// Multi-account: each account stored at users/{uid}/accounts/{accountId}
+window._fbSaveAccount=async(uid,accountId,data)=>{
+  if(!data||!uid||!accountId||!data.owner)return;
   const ts=Date.now();
-  try{await setDoc(doc(db,"users",uid),{state:JSON.stringify({...data,updatedAt:ts}),updatedAt:ts});console.log("☁ saved",new Date().toLocaleTimeString());}
+  try{await setDoc(doc(db,"users",uid,"accounts",accountId),{state:JSON.stringify({...data,updatedAt:ts}),updatedAt:ts,accountName:data.owner});console.log("☁ saved",accountId,new Date().toLocaleTimeString());}
   catch(e){console.error("Firebase save error:",e.code,e.message);}
 };
-window._fbLoad=async uid=>{
-  try{const s=await getDoc(doc(db,"users",uid));if(s.exists()&&s.data().state){const p=JSON.parse(s.data().state);if(p&&p.owner)return p;}}
+window._fbLoadAccount=async(uid,accountId)=>{
+  try{const s=await getDoc(doc(db,"users",uid,"accounts",accountId));if(s.exists()&&s.data().state){const p=JSON.parse(s.data().state);if(p&&p.owner)return p;}}
   catch(e){console.error("Firebase load error:",e);}
   return null;
 };
-window._fbListen=(uid,cb)=>onSnapshot(doc(db,"users",uid),s=>{
+window._fbLoadAllAccounts=async(uid)=>{
+  try{
+    const snap=await getDocs(collection(db,"users",uid,"accounts"));
+    const accounts=[];
+    snap.forEach(d=>{
+      if(d.data().state){try{const p=JSON.parse(d.data().state);if(p&&p.owner)accounts.push({id:d.id,...p});}catch(e){}}
+    });
+    // Also check legacy single-account format
+    const legacy=await getDoc(doc(db,"users",uid));
+    if(legacy.exists()&&legacy.data().state){
+      try{const p=JSON.parse(legacy.data().state);if(p&&p.owner&&!accounts.find(a=>a.id==="account_legacy"))accounts.unshift({id:"account_legacy",...p});}catch(e){}
+    }
+    return accounts;
+  }catch(e){console.error("Firebase loadAll error:",e);}
+  return [];
+};
+window._fbListenAccount=(uid,accountId,cb)=>onSnapshot(doc(db,"users",uid,"accounts",accountId),s=>{
   if(s.exists()&&s.data().state){try{const p=JSON.parse(s.data().state);if(p&&p.owner)cb(p);}catch(e){}}
 });
+window._fbDeleteAccount=async(uid,accountId)=>{
+  try{await deleteDoc(doc(db,"users",uid,"accounts",accountId));}
+  catch(e){console.error("Firebase delete error:",e);}
+};
+// Migrate legacy account to new format
+window._fbMigrateLegacy=async(uid,data)=>{
+  if(!data||!data.owner)return;
+  await window._fbSaveAccount(uid,"account_legacy",data);
+};
 getRedirectResult(auth).catch(()=>{});
 window._fbReady=true;window.dispatchEvent(new Event("fbready"));
 </script>
@@ -127,11 +153,15 @@ const CATS=["INCOME","GROCERIES","UTILITIES","DINING","FAST FOOD","HOUSING","BIL
 const f$=v=>{const n=v<0;const t=Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");return(n?"-$":"$")+t;};
 const fFull=ts=>{const dt=new Date(ts);return dt.toLocaleDateString("en-US",{month:"short",day:"2-digit",year:"numeric"})+" "+dt.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});};
 const fShort=ts=>new Date(ts).toLocaleDateString("en-US",{month:"short",day:"2-digit"});
-const SK="chk_v5",TK="chk_v5_tid";
-const ldSt=()=>{try{const x=localStorage.getItem(SK);return x?JSON.parse(x):null;}catch{return null;}};
-const svSt=x=>{try{localStorage.setItem(SK,JSON.stringify(x));}catch{}};
+const TK="chk_v5_tid",AK="chk_v5_accounts",CK="chk_v5_current";
+const ldAccounts=()=>{try{const x=localStorage.getItem(AK);return x?JSON.parse(x):{};}catch{return{};}};
+const svAccounts=x=>{try{localStorage.setItem(AK,JSON.stringify(x));}catch{}};
+const ldCurrentId=()=>{try{return localStorage.getItem(CK)||null;}catch{return null;}};
+const svCurrentId=id=>{try{if(id)localStorage.setItem(CK,id);else localStorage.removeItem(CK);}catch{}};
 const ldTid=()=>{try{return parseInt(localStorage.getItem(TK)||"0")||0;}catch{return 0;}};
 const svTid=i=>{try{localStorage.setItem(TK,String(i));}catch{}};
+// Legacy single-account migration
+const ldLegacy=()=>{try{const x=localStorage.getItem("chk_v5");return x?JSON.parse(x):null;}catch{return null;}};
 
 
 // ─── UI PRIMITIVES ───────────────────────────────────────────────────────────
@@ -295,6 +325,39 @@ function EditModal({tx,t,onSave,onDelete,onClose}){
           b({onClick:save,style:{flex:1,padding:"14px 0",borderRadius:13,fontWeight:900,fontSize:15,color:"#fff",cursor:"pointer",border:"none",background:`linear-gradient(135deg,${t.h1},${t.h2})`}},"✅ Save")
         )
       )
+    )
+  );
+}
+
+
+// ─── ACCOUNT MANAGER ─────────────────────────────────────────────────────────
+function AccountManager({accounts,t,onSelect,onNew,onDelete}){
+  return d({style:{minHeight:"100vh",background:t.panel2,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 20px"}},
+    d({style:{width:"100%",maxWidth:440}},
+      d({style:{textAlign:"center",marginBottom:28}},
+        d({style:{fontSize:54,marginBottom:10}},"🏦"),
+        d({style:{color:"#fff",fontWeight:900,fontSize:22}},"YOUR ACCOUNTS"),
+        d({style:{color:t.muted,fontSize:13,marginTop:6}})
+      ),
+      d({style:{display:"flex",flexDirection:"column",gap:10,marginBottom:16}},
+        accounts.map(acc=>
+          d({key:acc.id,style:{display:"flex",alignItems:"center",gap:10,background:t.panel,border:`1px solid ${t.border}40`,borderRadius:14,padding:"14px 16px",cursor:"pointer",boxShadow:"0 4px 16px #00000040"},
+            onClick:()=>onSelect(acc.id)},
+            d({style:{width:44,height:44,borderRadius:12,background:`linear-gradient(135deg,${t.h1},${t.h2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}},"🏦"),
+            d({style:{flex:1,minWidth:0}},
+              d({style:{fontWeight:900,fontSize:15,color:t.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},acc.owner),
+              d({style:{fontSize:12,color:t.muted,marginTop:2}},"****"+(acc.accountNum||"0000")+" · "+f$(acc.checking||0))
+            ),
+            d({style:{display:"flex",alignItems:"center",gap:6}},
+              d({style:{color:t.accent,fontSize:18,fontWeight:700}},"›"),
+              b({onClick:ev=>{ev.stopPropagation();if(window.confirm("Delete this account? All data will be lost."))onDelete(acc.id);},
+                style:{background:t.bad+"18",border:`1px solid ${t.bad}38`,color:t.bad,borderRadius:8,padding:"4px 8px",fontSize:11,cursor:"pointer",fontWeight:700}
+              },"✕")
+            )
+          )
+        )
+      ),
+      b({onClick:onNew,style:{width:"100%",padding:"15px 0",borderRadius:14,fontWeight:900,fontSize:16,color:"#fff",cursor:"pointer",border:`2px dashed ${t.accent}60`,background:t.accent+"12",color:t.accent}},"＋ Add New Account")
     )
   );
 }
@@ -482,10 +545,12 @@ function App(){
   const vw=useWindowWidth();
   const isDesktop=vw>=900&&!('ontouchstart' in window)&&navigator.maxTouchPoints===0;
   const [user,setUser]=useState(undefined);
+  const [accounts,setAccounts]=useState({}); // {id: stateObj}
+  const [currentId,setCurrentId]=useState(null); // active account id
+  const [appPhase,setAppPhase]=useState("loading"); // loading|signin|manager|setup|main
   const [st,setSt]=useState(null);
   const [screen,setScreen]=useState("dashboard");
   const [tid,setTid]=useState(ldTid);
-  
   const [undos,setUndos]=useState([]);
   const [redos,setRedos]=useState([]);
   const [search,setSearch]=useState("");
@@ -503,34 +568,77 @@ function App(){
   const listenUnsub=useRef(null);
   const T=THEMES[tid];
 
-  
   useEffect(()=>{if(fbReady)return;const h=()=>setFbReady(true);window.addEventListener("fbready",h);return()=>window.removeEventListener("fbready",h);},[fbReady]);
 
+  // Load all accounts on sign-in
   useEffect(()=>{
     if(!fbReady||!window._fbOnAuth)return;
     return window._fbOnAuth(async u=>{
       if(u){
         setUser(u);setSyncing(true);
-        const remote=await window._fbLoad(u.uid);
-        if(remote){setSt(remote);svSt(remote);}
-        else{const local=ldSt();if(local){setSt(local);await window._fbSave(u.uid,local);}}
+        // Load all accounts from Firebase
+        const remoteAccounts=await window._fbLoadAllAccounts(u.uid);
+        // Also check localStorage
+        const localAccounts=ldAccounts();
+        // Migrate legacy single account if exists
+        const legacy=ldLegacy();
+        if(legacy&&legacy.owner){
+          if(!localAccounts["account_legacy"]){
+            localAccounts["account_legacy"]=legacy;
+            svAccounts(localAccounts);
+          }
+          // Migrate to Firebase too
+          if(!remoteAccounts.find(a=>a.id==="account_legacy")){
+            await window._fbMigrateLegacy(u.uid,legacy);
+            remoteAccounts.push({id:"account_legacy",...legacy});
+          }
+        }
+        // Merge remote into local
+        const merged={...localAccounts};
+        remoteAccounts.forEach(a=>{const{id,...data}=a;merged[id]=data;});
+        svAccounts(merged);
+        setAccounts(merged);
         setSyncing(false);
-        if(listenUnsub.current)listenUnsub.current();
-        listenUnsub.current=window._fbListen(u.uid,data=>{setSt(data);svSt(data);});
-      }else{setUser(null);setSt(null);if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}}
+        // Decide phase
+        const ids=Object.keys(merged);
+        if(ids.length===0){setAppPhase("setup");}
+        else{
+          const savedId=ldCurrentId();
+          if(savedId&&merged[savedId]){selectAccount(savedId,merged);}
+          else if(ids.length===1){selectAccount(ids[0],merged);}
+          else{setAppPhase("manager");}
+        }
+      }else{setUser(null);setSt(null);setAccounts({});setCurrentId(null);setAppPhase("signin");if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}}
     });
   },[fbReady]);
   useEffect(()=>()=>{if(listenUnsub.current)listenUnsub.current();},[]);
   useEffect(()=>{svTid(tid);},[tid]);
 
   const userRef=useRef(user);
+  const currentIdRef=useRef(currentId);
   useEffect(()=>{userRef.current=user;},[user]);
+  useEffect(()=>{currentIdRef.current=currentId;},[currentId]);
 
-  const saveToCloud=useCallback(data=>{
+  const selectAccount=(id,accs)=>{
+    const data=(accs||accounts)[id];
+    if(!data)return;
+    setSt(data);setCurrentId(id);svCurrentId(id);setAppPhase("main");setScreen("dashboard");setUndos([]);setRedos([]);
+    // Start listener for this account
+    if(listenUnsub.current)listenUnsub.current();
     const uid=userRef.current?.uid;
-    if(!uid||!data?.owner)return;
-    svSt(data);clearTimeout(saveTimer.current);
-    saveTimer.current=setTimeout(()=>window._fbSave(uid,data),500);
+    if(uid)listenUnsub.current=window._fbListenAccount(uid,id,remoteData=>{
+      setSt(remoteData);
+      setAccounts(prev=>{const n={...prev,[id]:remoteData};svAccounts(n);return n;});
+    });
+  };
+
+  const saveToCloud=useCallback((data,id)=>{
+    const uid=userRef.current?.uid;
+    const accountId=id||currentIdRef.current;
+    if(!uid||!accountId||!data?.owner)return;
+    setAccounts(prev=>{const n={...prev,[accountId]:data};svAccounts(n);return n;});
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>window._fbSaveAccount(uid,accountId,data),500);
   },[]);
 
   const setStAndSave=useCallback(upd=>{
@@ -542,9 +650,28 @@ function App(){
   const undo=()=>{if(!undos.length)return;setRedos(r=>[...r,st]);setStAndSave(undos[undos.length-1]);setUndos(u=>u.slice(0,-1));notify("Undo",false);};
   const redo=()=>{if(!redos.length)return;setUndos(u=>[...u,st]);setStAndSave(redos[redos.length-1]);setRedos(r=>r.slice(0,-1));notify("Redo",false);};
 
-  if(user===undefined||!fbReady)return d({style:{minHeight:"100vh",background:"#0f0f23",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}},d({style:{fontSize:48}},"🏦"),d({style:{color:"#00d7ff",fontWeight:700,fontSize:14}},"Loading…"));
-  if(!user)return e(SignInScreen,{t:T});
-  if(!st)return e(Setup,{t:T,onDone:x=>setStAndSave(x)});
+  const deleteAccount=async(id)=>{
+    const uid=userRef.current?.uid;
+    if(uid)await window._fbDeleteAccount(uid,id);
+    setAccounts(prev=>{const n={...prev};delete n[id];svAccounts(n);return n;});
+    if(currentId===id){setSt(null);setCurrentId(null);svCurrentId(null);setAppPhase("manager");if(listenUnsub.current){listenUnsub.current();listenUnsub.current=null;}}
+  };
+
+  const accountList=Object.entries(accounts).map(([id,data])=>({id,...data}));
+
+  if(appPhase==="loading"||user===undefined||!fbReady)return d({style:{minHeight:"100vh",background:"#0f0f23",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}},d({style:{fontSize:48}},"🏦"),d({style:{color:"#00d7ff",fontWeight:700,fontSize:14}},"Loading…"));
+  if(appPhase==="signin"||!user)return e(SignInScreen,{t:T});
+  if(appPhase==="manager")return e(AccountManager,{accounts:accountList,t:T,onSelect:id=>selectAccount(id),onNew:()=>setAppPhase("setup"),onDelete:deleteAccount});
+  if(appPhase==="setup")return e(Setup,{t:T,onDone:x=>{
+    const id="account_"+Date.now();
+    saveToCloud(x,id);
+    setCurrentId(id);svCurrentId(id);
+    setSt(x);setAppPhase("main");setScreen("dashboard");
+  }});
+  if(!st)return e(Setup,{t:T,onDone:x=>{
+    const id="account_"+Date.now();
+    saveToCloud(x,id);setCurrentId(id);svCurrentId(id);setSt(x);setAppPhase("main");setScreen("dashboard");
+  }});
   if(!st.recurring)st.recurring=[];
 
   const recalc=ledger=>{let chk=0,sv=st.savings;return ledger.map(tx=>{if(tx.type==="DEPOSIT")chk+=tx.amount;if(tx.type==="WITHDRAWAL")chk-=tx.amount;if(tx.type==="XFER-OUT"){chk-=tx.amount;sv+=tx.amount;}if(tx.type==="XFER-IN"){chk+=tx.amount;sv-=tx.amount;}return{...tx,postBalance:chk};});};
@@ -597,7 +724,7 @@ function App(){
     };reader.readAsText(file);
   };
 
-  const resetApp=()=>{if(!window.confirm("Delete ALL data? This cannot be undone."))return;localStorage.removeItem(SK);if(user&&window._fbSave)window._fbSave(user.uid,{}).catch(()=>{});setSt(null);setUndos([]);setRedos([]);};
+  const resetApp=()=>{if(!window.confirm("Delete this account? All data will be permanently lost."))return;deleteAccount(currentId);};
 
   const totalIn=st.ledger.filter(t=>t.type==="DEPOSIT"||t.type==="XFER-IN").reduce((a,t)=>a+t.amount,0);
   const totalOut=st.ledger.filter(t=>t.type==="WITHDRAWAL"||t.type==="XFER-OUT").reduce((a,t)=>a+t.amount,0);
@@ -777,7 +904,7 @@ function App(){
         ),
         d({style:{display:"flex",gap:5,alignItems:"center"}},
           syncing&&s({style:{color:"rgba(255,255,255,0.45)",fontSize:10,marginRight:2}},"☁"),
-
+          b({onClick:()=>setAppPhase("manager"),title:"Switch account",style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}50`,color:"#fff",borderRadius:8,padding:"5px 9px",fontWeight:700,fontSize:10,cursor:"pointer"}},"⇄ Accts"),
           b({onClick:()=>setShowTheme(p=>!p),title:"Theme",style:{background:"rgba(0,0,0,0.3)",border:`1px solid ${T.accent}50`,color:"#fff",borderRadius:8,padding:"5px 9px",fontSize:13,cursor:"pointer"}},"🎨"),
           b({onClick:()=>window._fbSignOut&&window._fbSignOut(),style:{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.18)",color:"rgba(255,255,255,0.65)",borderRadius:8,padding:"5px 9px",fontWeight:700,fontSize:10,cursor:"pointer"}},"Sign out")
         )
@@ -800,7 +927,8 @@ function App(){
       e(SideBtn,{id:"recurring",icon:"🔁",label:"Recurring"}),
       e(SideBtn,{id:"search",icon:"🔍",label:"Search"}),
       d({style:{flex:1}}),
-      b({onClick:()=>setShowQuick(true),style:{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:11,border:`1.5px solid ${T.accent}45`,cursor:"pointer",width:"100%",background:T.accent+"12",color:T.accent,fontWeight:700,fontSize:13,marginBottom:10}},"⚡ Quick Add"),
+      b({onClick:()=>setShowQuick(true),style:{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:11,border:`1.5px solid ${T.accent}45`,cursor:"pointer",width:"100%",background:T.accent+"12",color:T.accent,fontWeight:700,fontSize:13,marginBottom:6}},"⚡ Quick Add"),
+      b({onClick:()=>setAppPhase("setup"),style:{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:11,border:`1.5px solid ${T.good}40`,cursor:"pointer",width:"100%",background:T.good+"10",color:T.good,fontWeight:700,fontSize:13,marginBottom:10}},"＋ New Account"),
       d({style:{borderTop:`1px solid ${T.border}28`,paddingTop:10}},
         d({style:{color:T.muted,fontSize:9,padding:"0 12px 3px",textTransform:"uppercase",letterSpacing:"0.1em"}},"Signed in as"),
         d({style:{color:T.text,fontSize:11,fontWeight:700,padding:"0 12px 10px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},(user&&user.email)||"")
@@ -826,6 +954,7 @@ function App(){
     d({id:"bottomnav",style:{background:T.panel,borderTop:`2px solid ${T.border}38`,boxShadow:"0 -4px 20px #00000080",paddingBottom:"env(safe-area-inset-bottom,0px)"}},
       e(NavBtn,{id:"dashboard",icon:"🏠",label:"Home"}),
       e(NavBtn,{id:"ledger",icon:"📋",label:"Ledger"}),
+      e(NavBtn,{id:"new-tx",icon:"➕",label:"New"}),
       e(NavBtn,{id:"monthly",icon:"📅",label:"Monthly"}),
       e(NavBtn,{id:"recurring",icon:"🔁",label:"Recurring"}),
       e(NavBtn,{id:"analytics",icon:"📊",label:"Analytics"})
